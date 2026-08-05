@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Instrucciones · Asistente</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/icono.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icono-180.png">
+  <meta name="theme-color" content="#100d13" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#faf8fa" media="(prefers-color-scheme: light)">
+  <script src="/tema.js"></script>
+</head>
+<body>
+<div class="wrap doc">
+
+  <header>
+    <div class="marca"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7.04" fill="var(--accent)"/><rect x="7" y="9" width="14" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="7" y="14.6" width="10" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="14" y="20.2" width="11" height="3.4" rx="1.7" fill="var(--accent-ink)"/></svg><h1>Instrucciones</h1></div>
+    <nav><a href="/">Volver</a></nav>
+  </header>
+
+  <h2>Como se usa</h2>
+
+  <h3>En el ordenador</h3>
+  <ul>
+    <li>Copia el mensaje del cliente en OnlyFans, como haces siempre.</li>
+    <li>Cambia a la pestana del asistente. <b>No tienes que pegar nada</b>: al volver a la pestana lo detecta solo y empieza a trabajar.</li>
+    <li>Aparece lo que dice el cliente en espanol y, debajo, tres formas de responder.</li>
+    <li>Pulsa <kbd>1</kbd>, <kbd>2</kbd> o <kbd>3</kbd> (o el boton <b>Copiar</b>) para copiar la respuesta en ingles.</li>
+    <li>Vuelve a OnlyFans, pega y envia.</li>
+  </ul>
+
+  <h3>En el movil</h3>
+  <ul>
+    <li>Los telefonos no permiten leer el portapapeles solos. Pega el mensaje en el recuadro y pulsa el boton grande.</li>
+    <li>El resto funciona igual.</li>
+  </ul>
+
+  <h3>Cosas utiles</h3>
+  <ul>
+    <li>La respuesta se escribe <b>directamente en ingles</b>, no se traduce desde el espanol. Asi suena natural y no a traductor automatico.</li>
+    <li>Debajo de cada respuesta tienes en espanol exactamente lo que dice. Nunca envias nada sin saber que dice.</li>
+    <li>El asistente reconoce solo si es un saludo, un cumplido, un emoji o una conversacion de verdad. Solo tienes que tocar el selector de <b>Situacion</b> si quieres forzar otra cosa.</li>
+    <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> vuelve a generar tres respuestas nuevas.</li>
+    <li>Si una respuesta no te convence, vuelve a generar: salen tres distintas.</li>
+  </ul>
+
+  <h2>Como esta configurada la personalidad</h2>
+  <div id="persona"></div>
+
+  <h2>Un ejemplo del tono</h2>
+  <div id="ejemplo" class="ex"></div>
+
+</div>
+
+<script>
+  const cont = document.getElementById("persona");
+  const ejemplo = document.getElementById("ejemplo");
+
+  function seccion(titulo, items) {
+    const h = document.createElement("h3");
+    h.textContent = titulo;
+    const ul = document.createElement("ul");
+    for (const it of items) {
+      const li = document.createElement("li");
+      li.textContent = it;
+      ul.append(li);
+    }
+    cont.append(h, ul);
+  }
+
+  fetch("/api/persona")
+    .then((r) => {
+      if (r.status === 401) { location.href = "/login"; throw new Error("no-auth"); }
+      return r.json();
+    })
+    .then((p) => {
+      seccion("Quien es " + p.nombre, p.identidad);
+      seccion("Reglas que sigue siempre", p.reglas_de_oro);
+      seccion("Frases que tiene prohibidas", p.prohibido_decir);
+      seccion(
+        "Situaciones que reconoce",
+        Object.values(p.situaciones).map((s) => s.etiqueta + " — " + s.objetivo)
+      );
+      seccion("Que puede ofrecer", p.ofertas.map((o) => o.nombre + " (" + o.precio + ") — " + o.para_quien));
+      seccion("Limites: cosas que nunca promete", p.limites);
+
+      for (const turno of p.ejemplo_de_conversacion) {
+        const linea = document.createElement("p");
+        const b = document.createElement("b");
+        b.textContent = turno.cliente ? "Cliente: " : p.nombre + ": ";
+        linea.append(b, document.createTextNode(turno.cliente || turno.maiko));
+        ejemplo.append(linea);
+      }
+    })
+    .catch(() => {});
+</script>
+</body>
+</html>

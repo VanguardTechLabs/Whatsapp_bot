@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Entrar · Asistente</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/icono.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icono-180.png">
+  <meta name="theme-color" content="#100d13" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#faf8fa" media="(prefers-color-scheme: light)">
+  <script src="/tema.js"></script>
+</head>
+<body>
+  <div class="login-box">
+    <svg class="logo grande" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7.04" fill="var(--accent)"/><rect x="7" y="9" width="14" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="7" y="14.6" width="10" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="14" y="20.2" width="11" height="3.4" rx="1.7" fill="var(--accent-ink)"/></svg>
+    <h1>Asistente de respuestas</h1>
+    <p class="sub">Entra para empezar a responder.</p>
+    <form id="form">
+      <input id="usuario" name="usuario" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" required>
+      <input id="clave" name="clave" type="password" placeholder="Clave" autocomplete="current-password" required>
+      <button class="primary" type="submit">Entrar</button>
+    </form>
+    <div id="error" class="error hidden" style="margin-top:14px"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById("form");
+    const err = document.getElementById("error");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      err.classList.add("hidden");
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuario: document.getElementById("usuario").value,
+          clave: document.getElementById("clave").value,
+        }),
+      });
+      if (res.ok) { location.href = "/"; return; }
+      const data = await res.json().catch(() => ({}));
+      err.textContent = data.error || "No se pudo entrar.";
+      err.classList.remove("hidden");
+    });
+  </script>
+</body>
+</html>

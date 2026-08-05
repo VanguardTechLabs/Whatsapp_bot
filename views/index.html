@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Asistente de respuestas</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/icono.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icono-180.png">
+  <meta name="theme-color" content="#100d13" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#faf8fa" media="(prefers-color-scheme: light)">
+  <script src="/tema.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="marca"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7.04" fill="var(--accent)"/><rect x="7" y="9" width="14" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="7" y="14.6" width="10" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="14" y="20.2" width="11" height="3.4" rx="1.7" fill="var(--accent-ink)"/></svg><h1>Asistente de respuestas</h1></div>
+    <nav>
+      <a href="/instrucciones">Instrucciones</a>
+      <a href="/ajustes">Ajustes</a>
+      <button id="salir" type="button">Salir</button>
+    </nav>
+  </header>
+
+  <div class="status">
+    <span id="dot" class="dot"></span>
+    <span id="estado">Listo.</span>
+  </div>
+
+  <div id="error" class="error hidden"></div>
+
+  <!-- aviso grande cuando las respuestas NO las escribe la IA -->
+  <div id="banner-demo" class="demo-banner hidden">
+    <div class="demo-title">Modo de prueba — estas respuestas no las escribe la IA</div>
+    <p id="demo-motivo"></p>
+    <p class="demo-warn">Son textos de ejemplo, siempre los mismos. No se los envies a un cliente.</p>
+    <a href="/ajustes">Arreglar la clave en Ajustes</a>
+  </div>
+
+  <!-- entrada -->
+  <div class="card">
+    <div class="label">Mensaje del cliente</div>
+    <textarea id="mensaje" placeholder="Pega aqui el mensaje del cliente (o cambia de pestana y se pega solo)."></textarea>
+
+    <div class="row" style="margin:12px 0">
+      <label for="situacion" style="font-size:13px;color:var(--muted)">Situacion</label>
+      <select id="situacion">
+        <option value="">Detectar sola</option>
+        <option value="nuevo">Cliente nuevo</option>
+        <option value="casual">Conversacion casual</option>
+        <option value="interesado">Interesado, no compra</option>
+        <option value="reconexion">Hace tiempo que no escribe</option>
+        <option value="habitual">Cliente habitual</option>
+      </select>
+      <label style="font-size:13px;color:var(--muted);margin-left:auto">
+        <input type="checkbox" id="auto" checked> Pegado automatico
+      </label>
+    </div>
+
+    <button id="generar" class="primary" type="button">Pegar y generar respuestas</button>
+  </div>
+
+  <!-- traduccion -->
+  <div id="bloque-traduccion" class="card hidden">
+    <div class="label">Lo que dice el cliente</div>
+    <div id="original" class="original"></div>
+    <div id="traduccion" class="translation"></div>
+    <div class="row" style="margin-top:12px">
+      <span id="chip-situacion" class="chip"></span>
+      <span id="chip-idioma" class="chip"></span>
+      <span id="motivo" style="font-size:13px;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <!-- respuestas -->
+  <div id="respuestas"></div>
+  <div id="meta" class="meta"></div>
+
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

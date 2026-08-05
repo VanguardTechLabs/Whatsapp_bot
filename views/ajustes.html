@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ajustes · Asistente</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/icono.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icono-180.png">
+  <meta name="theme-color" content="#100d13" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#faf8fa" media="(prefers-color-scheme: light)">
+  <script src="/tema.js"></script>
+</head>
+<body>
+<div class="wrap doc">
+
+  <header>
+    <div class="marca"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7.04" fill="var(--accent)"/><rect x="7" y="9" width="14" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="7" y="14.6" width="10" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="14" y="20.2" width="11" height="3.4" rx="1.7" fill="var(--accent-ink)"/></svg><h1>Ajustes</h1></div>
+    <nav><a href="/">Volver</a></nav>
+  </header>
+
+  <!-- estado actual -->
+  <div class="card">
+    <div class="label">Estado de la cuenta</div>
+    <div class="row" style="gap:10px">
+      <span id="dot-estado" class="dot"></span>
+      <span id="texto-estado">Comprobando...</span>
+    </div>
+    <div id="detalle-estado" style="font-size:13px;color:var(--muted);margin-top:8px"></div>
+  </div>
+
+  <div id="aviso" class="error hidden"></div>
+  <div id="exito" class="card hidden" style="border-color:var(--ok);color:var(--ok)"></div>
+
+  <!-- clave -->
+  <div class="card">
+    <div class="label">Tu clave de OpenAI</div>
+    <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px">
+      Pega aqui la clave que copiaste de <b>platform.openai.com</b>. Empieza por
+      <code style="color:var(--text)">sk-</code> y es muy larga. Se guarda en el servidor y no se vuelve a mostrar entera.
+    </p>
+
+    <textarea id="clave" rows="3" placeholder="sk-proj-..." autocapitalize="none" autocorrect="off" spellcheck="false"></textarea>
+
+    <div class="row" style="margin-top:12px">
+      <button id="guardar" class="primary" type="button" style="flex:1 1 180px">Guardar clave</button>
+      <button id="probar" class="secundario" type="button" style="flex:1 1 140px">Probar</button>
+    </div>
+
+    <div style="margin-top:14px">
+      <button id="borrar" class="enlace" type="button">Borrar la clave guardada</button>
+    </div>
+  </div>
+
+  <!-- modelo -->
+  <div class="card">
+    <div class="label">Modelo</div>
+    <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px">
+      Solo cambialo si te lo pido. Unos escriben mejor, otros son mas baratos.
+    </p>
+    <div class="row">
+      <select id="modelo" style="flex:1"></select>
+      <button id="guardar-modelo" class="secundario" type="button">Guardar</button>
+    </div>
+  </div>
+
+  <!-- apariencia -->
+  <div class="card">
+    <div class="label">Apariencia</div>
+    <p class="ayuda">Como se ve la aplicacion. Se guarda en este dispositivo.</p>
+
+    <div style="margin-bottom:18px">
+      <div style="font-size:13.5px;color:var(--muted);margin-bottom:9px">Tema</div>
+      <div class="segmentado" id="tema" role="group" aria-label="Tema">
+        <button type="button" data-tema="auto">Automatico</button>
+        <button type="button" data-tema="light">Claro</button>
+        <button type="button" data-tema="dark">Oscuro</button>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:13.5px;color:var(--muted);margin-bottom:11px">Color principal</div>
+      <div class="colores" id="colores" role="group" aria-label="Color principal"></div>
+    </div>
+  </div>
+
+  <!-- ayuda -->
+  <h2>Si algo no funciona</h2>
+  <ul>
+    <li><b>«La clave no es valida»</b> — te has dejado un trozo al copiar. Copiala otra vez entera, desde <code>sk-</code> hasta el ultimo caracter.</li>
+    <li><b>«La cuenta esta a cero»</b> — la clave esta bien, pero falta comprar saldo. Entra en platform.openai.com, apartado <b>Billing</b>, y pulsa <b>Add to credit balance</b>. Con 5 dolares sobra. Crear una clave nueva no añade dinero.</li>
+    <li><b>«El modelo no existe»</b> — elige otro en la lista de arriba.</li>
+  </ul>
+
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const aviso = $("aviso"), exito = $("exito");
+
+  function error(t) {
+    exito.classList.add("hidden");
+    if (!t) return aviso.classList.add("hidden");
+    aviso.textContent = t;
+    aviso.classList.remove("hidden");
+  }
+  function ok(t) {
+    aviso.classList.add("hidden");
+    exito.textContent = t;
+    exito.classList.remove("hidden");
+  }
+
+  async function pedir(url, opciones) {
+    const res = await fetch(url, opciones);
+    if (res.status === 401) { location.href = "/login"; throw new Error("no-auth"); }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Ha fallado.");
+    return data;
+  }
+
+  async function cargarEstado() {
+    const a = await pedir("/api/ajustes");
+
+    const dot = $("dot-estado"), txt = $("texto-estado"), det = $("detalle-estado");
+    if (a.modo_simulado) {
+      dot.className = "dot off";
+      txt.textContent = "Modo de prueba activado";
+      det.textContent = a.clave_configurada
+        ? "Atencion: hay una clave puesta, pero el modo de prueba la ignora. Las respuestas siguen siendo de ejemplo. Hay que quitar MOCK=1 del archivo .env del servidor."
+        : "Las respuestas son de ejemplo, no las escribe la IA.";
+    } else if (a.clave_configurada) {
+      dot.className = "dot on";
+      txt.textContent = "Clave configurada";
+      det.textContent = a.clave_enmascarada + (a.origen === "env" ? " (puesta por el desarrollador)" : "");
+    } else {
+      dot.className = "dot off";
+      txt.textContent = "Sin clave";
+      det.textContent = "Pega tu clave abajo para poder usar el asistente.";
+    }
+
+    const sel = $("modelo");
+    if (!sel.options.length) {
+      sel.replaceChildren(new Option(a.modelo, a.modelo, true, true));
+    }
+    sel.value = a.modelo;
+
+    if (a.clave_configurada) cargarModelos(a.modelo);
+  }
+
+  async function cargarModelos(actual) {
+    try {
+      const { modelos } = await pedir("/api/ajustes/modelos");
+      const sel = $("modelo");
+      sel.replaceChildren(...modelos.map((m) => new Option(m, m, m === actual, m === actual)));
+      if (!modelos.includes(actual)) sel.prepend(new Option(actual, actual, true, true));
+      sel.value = actual;
+    } catch { /* sin clave valida todavia: se deja el desplegable como esta */ }
+  }
+
+  $("guardar").addEventListener("click", async () => {
+    const clave = $("clave").value.trim();
+    if (!clave) return error("Pega la clave primero.");
+    const btn = $("guardar");
+    btn.disabled = true; btn.textContent = "Guardando...";
+    try {
+      await pedir("/api/ajustes", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ openai_api_key: clave }),
+      });
+      $("clave").value = "";
+      ok("Clave guardada. Pulsa Probar para comprobar que todo funciona.");
+      await cargarEstado();
+    } catch (e) { error(e.message); }
+    finally { btn.disabled = false; btn.textContent = "Guardar clave"; }
+  });
+
+  $("probar").addEventListener("click", async () => {
+    const btn = $("probar");
+    btn.disabled = true; btn.textContent = "Probando...";
+    error("");
+    try {
+      const clave = $("clave").value.trim();
+      const r = await pedir("/api/ajustes/probar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(clave ? { clave } : {}),
+      });
+      ok(r.mensaje);
+    } catch (e) { error(e.message); }
+    finally { btn.disabled = false; btn.textContent = "Probar"; }
+  });
+
+  $("borrar").addEventListener("click", async () => {
+    if (!confirm("Se borrara la clave guardada. Seguro?")) return;
+    try {
+      await pedir("/api/ajustes/clave", { method: "DELETE" });
+      ok("Clave borrada.");
+      await cargarEstado();
+    } catch (e) { error(e.message); }
+  });
+
+  $("guardar-modelo").addEventListener("click", async () => {
+    try {
+      await pedir("/api/ajustes", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modelo: $("modelo").value }),
+      });
+      ok("Modelo guardado.");
+    } catch (e) { error(e.message); }
+  });
+
+  /* ------------------------------------------------------------ apariencia */
+
+  function leer(clave) {
+    try { return localStorage.getItem(clave); } catch { return null; }
+  }
+
+  function pintarTema() {
+    const actual = leer("tema") || "auto";
+    for (const b of $("tema").children) {
+      b.setAttribute("aria-pressed", String(b.dataset.tema === actual));
+    }
+  }
+
+  function pintarColores() {
+    const elegida = leer("paleta") || PALETAS[0].nombre;
+    const oscuro = (document.documentElement.getAttribute("data-theme")
+      || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+
+    $("colores").replaceChildren(
+      ...PALETAS.map((p) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.title = p.nombre;
+        b.setAttribute("aria-label", p.nombre);
+        b.setAttribute("aria-pressed", String(p.nombre === elegida));
+        b.style.setProperty("--tono", oscuro ? p.oscuro : p.claro);
+        b.addEventListener("click", () => {
+          guardarApariencia(null, p);
+          pintarColores();
+        });
+        return b;
+      })
+    );
+  }
+
+  $("tema").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-tema]");
+    if (!b) return;
+    guardarApariencia(b.dataset.tema, null);
+    pintarTema();
+    pintarColores(); // el tono del muestrario cambia con el tema
+  });
+
+  pintarTema();
+  pintarColores();
+
+  cargarEstado().catch((e) => error(e.message));
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "asistente-maiko",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Asistente privado de respuestas: traduce el mensaje del cliente al espanol y propone 3 respuestas en ingles con su version en espanol.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "probar": "node scripts/probar.js",
+    "modelos": "node scripts/modelos.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "openai": "^7.3.0"
+  }
+}
