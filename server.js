@@ -22,6 +22,10 @@ import {
   modeloEfectivo,
   origenClave,
   enmascarar,
+  hayPassword,
+  passwordPropia,
+  verificarPassword,
+  guardarPassword,
 } from "./src/ajustes.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -34,8 +38,8 @@ const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toSt
 if (!claveEfectiva() && !MODO_SIMULADO && !process.env.OPENAI_BASE_URL) {
   console.warn("[aviso] Sin clave configurada — se puede poner desde la web, en Ajustes.");
 }
-if (!APP_PASSWORD) {
-  console.warn("[aviso] Falta APP_PASSWORD en .env — nadie podra entrar.");
+if (!hayPassword()) {
+  console.warn("[aviso] Sin clave de acceso: falta APP_PASSWORD y no se ha puesto ninguna desde la web.");
 }
 
 const app = express();
@@ -55,7 +59,7 @@ const cookieOpts = {
 };
 
 function isLoggedIn(req) {
-  return req.signedCookies?.[COOKIE] === APP_USER && APP_PASSWORD.length > 0;
+  return req.signedCookies?.[COOKIE] === APP_USER && hayPassword();
 }
 
 function requireAuth(req, res, next) {
@@ -95,7 +99,7 @@ function loginFallido(ip) {
 app.post("/api/login", frenarLogin, (req, res) => {
   // Sin APP_PASSWORD nadie puede entrar nunca. Decirlo claro, en vez de
   // "usuario o clave incorrectos", que hace perder mucho tiempo buscando.
-  if (!APP_PASSWORD) {
+  if (!hayPassword()) {
     return res.status(500).json({
       error:
         "El servidor no tiene ninguna clave configurada: falta la variable APP_PASSWORD. No es culpa de lo que has escrito.",
@@ -104,11 +108,7 @@ app.post("/api/login", frenarLogin, (req, res) => {
 
   const { usuario, clave } = req.body ?? {};
   const okUser = typeof usuario === "string" && usuario.trim() === APP_USER;
-  const okPass =
-    typeof clave === "string" &&
-    APP_PASSWORD.length > 0 &&
-    clave.length === APP_PASSWORD.length &&
-    crypto.timingSafeEqual(Buffer.from(clave), Buffer.from(APP_PASSWORD));
+  const okPass = verificarPassword(clave);
 
   if (!okUser || !okPass) {
     loginFallido(req.ip);
@@ -130,9 +130,36 @@ app.get("/api/me", (req, res) => {
     usuario: isLoggedIn(req) ? APP_USER : null,
     // Para diagnosticar sin exponer nada: que usuario espera y si hay clave.
     usuario_esperado: APP_USER,
-    clave_configurada: Boolean(APP_PASSWORD),
+    clave_configurada: hayPassword(),
+    clave_propia: passwordPropia(),
     en_produccion: process.env.NODE_ENV === "production",
   });
+});
+
+/** Cambiar la clave de acceso desde la propia web. */
+app.post("/api/password", requireAuth, (req, res) => {
+  const actual = String(req.body?.actual ?? "");
+  const nueva = String(req.body?.nueva ?? "");
+
+  if (!verificarPassword(actual)) {
+    return res.status(401).json({ error: "La clave actual no es correcta." });
+  }
+  if (nueva.length < 6) {
+    return res.status(400).json({ error: "La clave nueva tiene que tener al menos 6 caracteres." });
+  }
+  if (nueva === actual) {
+    return res.status(400).json({ error: "La clave nueva es igual que la de ahora." });
+  }
+
+  try {
+    guardarPassword(nueva);
+    // Se renueva la cookie para no quedarse fuera al cambiarla.
+    res.cookie(COOKIE, APP_USER, cookieOpts);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[password]", err?.message ?? err);
+    res.status(500).json({ error: "No se ha podido guardar la clave nueva." });
+  }
 });
 
 /* ------------------------------------------------------------- persona --- */

@@ -65,6 +65,25 @@
     </div>
   </div>
 
+  <!-- clave de acceso -->
+  <div class="card">
+    <div class="label">Tu clave para entrar</div>
+    <p class="ayuda">
+      La que escribes al abrir la aplicacion. Cambiala cuando quieras;
+      no necesitas avisar a nadie.
+    </p>
+
+    <input id="pw-actual" type="password" placeholder="Clave de ahora"
+           autocomplete="current-password" style="margin-bottom:10px">
+    <input id="pw-nueva" type="password" placeholder="Clave nueva (minimo 6 caracteres)"
+           autocomplete="new-password" style="margin-bottom:10px">
+    <input id="pw-repetir" type="password" placeholder="Repite la clave nueva"
+           autocomplete="new-password" style="margin-bottom:12px">
+
+    <button id="cambiar-pw" class="primary" type="button">Cambiar la clave</button>
+    <p id="pw-origen" class="ayuda" style="margin:12px 0 0"></p>
+  </div>
+
   <!-- apariencia -->
   <div class="card">
     <div class="label">Apariencia</div>
@@ -210,6 +229,45 @@
       });
       ok("Modelo guardado.");
     } catch (e) { error(e.message); }
+  });
+
+  /* ----------------------------------------------------------- clave de acceso */
+
+  fetch("/api/me")
+    .then((r) => r.json())
+    .then((m) => {
+      $("pw-origen").textContent = m.clave_propia
+        ? "Ahora mismo usas una clave puesta por ti desde aqui."
+        : "Ahora mismo usas la clave que dejo puesta el desarrollador.";
+    })
+    .catch(() => {});
+
+  $("cambiar-pw").addEventListener("click", async () => {
+    const actual = $("pw-actual").value;
+    const nueva = $("pw-nueva").value;
+    const repetir = $("pw-repetir").value;
+
+    if (!actual || !nueva) return error("Rellena la clave de ahora y la nueva.");
+    if (nueva !== repetir) return error("Las dos claves nuevas no coinciden.");
+
+    const btn = $("cambiar-pw");
+    btn.disabled = true;
+    btn.textContent = "Cambiando...";
+    try {
+      await pedir("/api/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actual, nueva }),
+      });
+      $("pw-actual").value = $("pw-nueva").value = $("pw-repetir").value = "";
+      ok("Clave cambiada. Usa la nueva la proxima vez que entres.");
+      $("pw-origen").textContent = "Ahora mismo usas una clave puesta por ti desde aqui.";
+    } catch (e) {
+      error(e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Cambiar la clave";
+    }
   });
 
   /* ------------------------------------------------------------ apariencia */
