@@ -93,6 +93,15 @@ function loginFallido(ip) {
 }
 
 app.post("/api/login", frenarLogin, (req, res) => {
+  // Sin APP_PASSWORD nadie puede entrar nunca. Decirlo claro, en vez de
+  // "usuario o clave incorrectos", que hace perder mucho tiempo buscando.
+  if (!APP_PASSWORD) {
+    return res.status(500).json({
+      error:
+        "El servidor no tiene ninguna clave configurada: falta la variable APP_PASSWORD. No es culpa de lo que has escrito.",
+    });
+  }
+
   const { usuario, clave } = req.body ?? {};
   const okUser = typeof usuario === "string" && usuario.trim() === APP_USER;
   const okPass =
@@ -116,7 +125,14 @@ app.post("/api/logout", (req, res) => {
 });
 
 app.get("/api/me", (req, res) => {
-  res.json({ autenticado: isLoggedIn(req), usuario: isLoggedIn(req) ? APP_USER : null });
+  res.json({
+    autenticado: isLoggedIn(req),
+    usuario: isLoggedIn(req) ? APP_USER : null,
+    // Para diagnosticar sin exponer nada: que usuario espera y si hay clave.
+    usuario_esperado: APP_USER,
+    clave_configurada: Boolean(APP_PASSWORD),
+    en_produccion: process.env.NODE_ENV === "production",
+  });
 });
 
 /* ------------------------------------------------------------- persona --- */
