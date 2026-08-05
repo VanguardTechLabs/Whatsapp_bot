@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Estilo · Asistente</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/icono.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icono-180.png">
+  <meta name="theme-color" content="#100d13" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#faf8fa" media="(prefers-color-scheme: light)">
+  <script src="/tema.js"></script>
+</head>
+<body>
+<div class="wrap doc">
+
+  <header>
+    <div class="marca">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7.04" fill="var(--accent)"/><rect x="7" y="9" width="14" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="7" y="14.6" width="10" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="14" y="20.2" width="11" height="3.4" rx="1.7" fill="var(--accent-ink)"/></svg>
+      <h1>Estilo</h1>
+    </div>
+    <nav><a href="/estilo">Estilo</a><a href="/">Volver</a></nav>
+  </header>
+
+  <p class="ayuda">
+    Aqui mandas tu. Todo lo que escribas en esta pagina cambia como habla el asistente,
+    al momento y sin depender de nadie. <b>Una linea por cada cosa.</b>
+  </p>
+
+  <div id="aviso" class="error hidden"></div>
+  <div id="exito" class="card hidden" style="border-color:var(--ok);color:var(--ok)"></div>
+
+  <div class="card">
+    <div class="label">Como eres</div>
+    <p class="ayuda">Tu forma de ser. Es lo que mas se nota en las respuestas.</p>
+    <textarea id="identidad" rows="7"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="label">Reglas que sigue siempre</div>
+    <p class="ayuda">Lo que quieres que haga o no haga, pase lo que pase.</p>
+    <textarea id="reglas_de_oro" rows="10"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="label">Frases prohibidas</div>
+    <p class="ayuda">Palabras o frases que no quieres leer nunca en una respuesta.</p>
+    <textarea id="prohibido_decir" rows="6"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="label">Limites: lo que NO ofreces</div>
+    <p class="ayuda">
+      Lo que no haces. El asistente no lo prometera jamas, aunque se lo pidan.
+      Con tres o cuatro lineas basta.
+    </p>
+    <textarea id="limites" rows="5"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="label">Que puedes ofrecer</div>
+    <p class="ayuda">
+      Una linea por pack: <b>nombre | para quien es</b>. Sin precios:
+      el asistente nunca dice una cifra, eso lo escribes tu.
+    </p>
+    <textarea id="ofertas" rows="4"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="label">Las 7 situaciones</div>
+    <p class="ayuda">Que quieres conseguir en cada caso y como quieres que suene.</p>
+    <div id="situaciones"></div>
+  </div>
+
+  <button id="guardar" class="primary" type="button">Guardar cambios</button>
+  <p class="ayuda" style="margin-top:12px;text-align:center">
+    Los cambios se aplican en la siguiente respuesta que generes.
+  </p>
+
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const aviso = $("aviso"), exito = $("exito");
+
+  function error(t) {
+    exito.classList.add("hidden");
+    if (!t) return aviso.classList.add("hidden");
+    aviso.textContent = t;
+    aviso.classList.remove("hidden");
+    scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function ok(t) {
+    aviso.classList.add("hidden");
+    exito.textContent = t;
+    exito.classList.remove("hidden");
+    scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function pedir(url, opciones) {
+    const res = await fetch(url, opciones);
+    if (res.status === 401) { location.href = "/login"; throw new Error("no-auth"); }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Ha fallado.");
+    return data;
+  }
+
+  let situaciones = {};
+
+  function cajaSituacion(clave, s) {
+    const caja = document.createElement("div");
+    caja.style.cssText = "padding:14px 0;border-top:1px solid var(--border)";
+
+    const titulo = document.createElement("div");
+    titulo.style.cssText = "font-weight:640;margin-bottom:9px";
+    titulo.textContent = s.etiqueta || clave;
+
+    const lo = document.createElement("label");
+    lo.style.cssText = "font-size:12.5px;color:var(--muted)";
+    lo.textContent = "Que quieres conseguir";
+    const objetivo = document.createElement("textarea");
+    objetivo.rows = 2;
+    objetivo.value = s.objetivo || "";
+    objetivo.dataset.clave = clave;
+    objetivo.dataset.campo = "objetivo";
+    objetivo.style.marginTop = "5px";
+
+    const lg = document.createElement("label");
+    lg.style.cssText = "font-size:12.5px;color:var(--muted);display:block;margin-top:11px";
+    lg.textContent = "Como quieres que suene";
+    const guia = document.createElement("textarea");
+    guia.rows = 4;
+    guia.value = s.guia || "";
+    guia.dataset.clave = clave;
+    guia.dataset.campo = "guia";
+    guia.style.marginTop = "5px";
+
+    caja.append(titulo, lo, objetivo, lg, guia);
+    return caja;
+  }
+
+  async function cargar() {
+    const p = await pedir("/api/persona");
+    $("identidad").value = (p.identidad || []).join("\n");
+    $("reglas_de_oro").value = (p.reglas_de_oro || []).join("\n");
+    $("prohibido_decir").value = (p.prohibido_decir || []).join("\n");
+    $("limites").value = (p.limites || []).join("\n");
+    $("ofertas").value = (p.ofertas || [])
+      .map((o) => [o.nombre, o.para_quien].filter(Boolean).join(" | "))
+      .join("\n");
+
+    situaciones = p.situaciones || {};
+    $("situaciones").replaceChildren(
+      ...Object.entries(situaciones).map(([clave, s]) => cajaSituacion(clave, s))
+    );
+  }
+
+  $("guardar").addEventListener("click", async () => {
+    const btn = $("guardar");
+    btn.disabled = true;
+    btn.textContent = "Guardando...";
+    error("");
+
+    const sit = {};
+    for (const t of $("situaciones").querySelectorAll("textarea")) {
+      sit[t.dataset.clave] = sit[t.dataset.clave] || {};
+      sit[t.dataset.clave][t.dataset.campo] = t.value;
+    }
+
+    try {
+      await pedir("/api/persona", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identidad: $("identidad").value,
+          reglas_de_oro: $("reglas_de_oro").value,
+          prohibido_decir: $("prohibido_decir").value,
+          limites: $("limites").value,
+          ofertas: $("ofertas").value,
+          situaciones: sit,
+        }),
+      });
+      ok("Guardado. Ya se nota en la proxima respuesta que generes.");
+      await cargar();
+    } catch (e) {
+      error(e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Guardar cambios";
+    }
+  });
+
+  cargar().catch((e) => error(e.message));
+</script>
+</body>
+</html>

@@ -64,11 +64,11 @@ function esProblemaDeConfiguracion(err) {
   return false;
 }
 
-export async function generarRespuestas({ mensaje, situacion = null, notas = "" }) {
+export async function generarRespuestas({ mensaje, situacion = null, notas = "", precio = "" }) {
   if (MODO_SIMULADO) return generarSimulado({ mensaje, situacion });
 
   try {
-    return await generarConAPI({ mensaje, situacion, notas });
+    return await generarConAPI({ mensaje, situacion, notas, precio });
   } catch (err) {
     if (!FALLBACK || !esProblemaDeConfiguracion(err)) throw err;
 
@@ -81,7 +81,7 @@ export async function generarRespuestas({ mensaje, situacion = null, notas = "" 
   }
 }
 
-async function generarConAPI({ mensaje, situacion, notas }) {
+async function generarConAPI({ mensaje, situacion, notas, precio }) {
   const persona = loadPersona();
   const modelo = modeloEfectivo();
   const t0 = Date.now();
@@ -93,7 +93,7 @@ async function generarConAPI({ mensaje, situacion, notas }) {
     max_completion_tokens: 8000,
     messages: [
       { role: "system", content: buildSystemPrompt(persona) },
-      { role: "user", content: buildUserPrompt({ message: mensaje, situation: situacion, notes: notas }) },
+      { role: "user", content: buildUserPrompt({ message: mensaje, situation: situacion, notes: notas, precio }) },
     ],
     response_format: {
       type: "json_schema",

@@ -18,6 +18,7 @@
   <header>
     <div class="marca"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7.04" fill="var(--accent)"/><rect x="7" y="9" width="14" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="7" y="14.6" width="10" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="14" y="20.2" width="11" height="3.4" rx="1.7" fill="var(--accent-ink)"/></svg><h1>Asistente de respuestas</h1></div>
     <nav>
+      <a href="/estilo">Estilo</a>
       <a href="/instrucciones">Instrucciones</a>
       <a href="/ajustes">Ajustes</a>
       <button id="salir" type="button">Salir</button>
@@ -48,18 +49,32 @@
       <label for="situacion" style="font-size:13px;color:var(--muted)">Situacion</label>
       <select id="situacion">
         <option value="">Detectar sola</option>
-        <option value="nuevo">Cliente nuevo</option>
-        <option value="casual">Conversacion casual</option>
-        <option value="interesado">Interesado, no compra</option>
-        <option value="reconexion">Hace tiempo que no escribe</option>
-        <option value="habitual">Cliente habitual</option>
+        <option value="saludo">Solo dice hola</option>
+        <option value="elogio">Manda un elogio</option>
+        <option value="emoji">Manda un emoji</option>
+        <option value="conversador">Conversa bastante</option>
+        <option value="ausente">Lleva tiempo sin escribir</option>
+        <option value="recuperar">Ya compro, hay que recuperarlo</option>
+        <option value="mirando">Habla mucho pero no compra</option>
       </select>
       <label style="font-size:13px;color:var(--muted);margin-left:auto">
         <input type="checkbox" id="auto" checked> Pegado automatico
       </label>
     </div>
 
+    <!-- el asistente nunca dice precios; solo si ella escribe uno aqui -->
+    <div style="margin:0 0 12px">
+      <label style="font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:7px">
+        <input type="checkbox" id="usar-precio"> Quiero decir el precio en esta respuesta
+      </label>
+      <input id="precio" class="hidden" type="text" inputmode="decimal"
+             placeholder="Por ejemplo: 25 dolares" style="margin-top:9px" autocomplete="off">
+    </div>
+
     <button id="generar" class="primary" type="button">Pegar y generar respuestas</button>
+    <button id="otra" class="secundario hidden" type="button" style="width:100%;margin-top:9px">
+      Generar otras respuestas distintas
+    </button>
   </div>
 
   <!-- traduccion -->

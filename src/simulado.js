@@ -36,17 +36,17 @@ export function detectarIdioma(mensaje) {
 
 const SITUACIONES = [
   {
-    clave: "nuevo",
+    clave: "saludo",
     coincide: (m) => /^(hi|hey|hello|hola|oi|ola)\b[\s!.,?]*$/i.test(normalizar(m)),
     motivo: "Es un saludo suelto, sin contexto: no hay conversacion todavia.",
   },
   {
-    clave: "interesado",
+    clave: "mirando",
     coincide: (m) => /(how much|price|cost|pack|menu|cuanto|quanto|preco)/i.test(normalizar(m)),
     motivo: "Pregunta por precio: hay interes, pero aun no hay conversacion.",
   },
   {
-    clave: "casual",
+    clave: "conversador",
     coincide: () => true,
     motivo: "Mensaje conversacional: toca mantener el ritmo, sin ofrecer nada.",
   },
@@ -54,7 +54,7 @@ const SITUACIONES = [
 
 /** Para cada situacion, tres respuestas en cada idioma. */
 const RESPUESTAS = {
-  nuevo: {
+  saludo: {
     en: [
       ["Cercana", "Hey. Good to see you here. How's your day going?", "Hola. Que bueno verte por aqui. Como va tu dia?"],
       ["Juguetona", "Well, hello. You caught me in a good mood. What brings you here?", "Vaya, hola. Me pillas de buen humor. Que te trae por aqui?"],
@@ -71,7 +71,7 @@ const RESPUESTAS = {
       ["Misteriosa", "Oi voce. Eu estava bem no meio de uma coisa. Me conta primeiro como foi o seu dia.", "Hola tu. Justo estaba en medio de algo. Cuentame tu primero como fue tu dia."],
     ],
   },
-  interesado: {
+  mirando: {
     en: [
       ["Cercana", "I'll get to that. First tell me something about you — I like knowing who I'm talking to before anything else.", "Ya llegaremos a eso. Primero cuentame algo de ti, me gusta saber con quien estoy hablando antes que nada."],
       ["Juguetona", "Straight to the point, I see. I don't usually go that fast. Tell me what caught your attention first.", "Directo al grano, ya veo. Yo no suelo ir tan rapido. Cuentame primero que fue lo que te llamo la atencion."],
@@ -88,7 +88,7 @@ const RESPUESTAS = {
       ["Misteriosa", "Tenho algumas coisas, e nao sao as mesmas para todo mundo. Depende da pessoa. Quem e voce?", "Tengo algunas cosas, y no son las mismas para todo el mundo. Depende de la persona. Tu quien eres?"],
     ],
   },
-  casual: {
+  conversador: {
     en: [
       ["Cercana", "I like that you actually write instead of just dropping a hi. Was today one of those long ones?", "Me gusta que escribas de verdad en vez de dejar solo un hola. Fue hoy uno de esos dias largos?"],
       ["Juguetona", "You're more interesting than you're letting on. Go on, I'm listening.", "Eres mas interesante de lo que dejas ver. Sigue, te escucho."],
@@ -115,7 +115,7 @@ export async function generarSimulado({ mensaje, situacion = null }) {
   const idioma = detectarIdioma(mensaje);
   const detectada = SITUACIONES.find((s) => s.coincide(mensaje));
   const clave = situacion ?? detectada.clave;
-  const juego = RESPUESTAS[clave] ?? RESPUESTAS.casual;
+  const juego = RESPUESTAS[clave] ?? RESPUESTAS.conversador;
 
   return {
     idioma_cliente: idioma,

@@ -13,7 +13,31 @@ export function loadPersona({ reload = false } = {}) {
   return cached;
 }
 
-export const SITUATIONS = ["nuevo", "casual", "interesado", "reconexion", "habitual"];
+/**
+ * Guarda los cambios hechos desde la pagina de Estilo.
+ * Solo se tocan los campos enviados: lo demas se queda como estaba.
+ */
+export function savePersona(parcial) {
+  const actual = loadPersona({ reload: true });
+  const nuevo = { ...actual, ...parcial };
+
+  const tmp = personaPath + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(nuevo, null, 2) + "\n");
+  fs.renameSync(tmp, personaPath);
+
+  cached = nuevo;
+  return nuevo;
+}
+
+export const SITUATIONS = [
+  "saludo",
+  "elogio",
+  "emoji",
+  "conversador",
+  "ausente",
+  "recuperar",
+  "mirando",
+];
 
 /**
  * Prompt de sistema. Es estable entre peticiones a proposito: asi se puede
@@ -36,9 +60,9 @@ export function buildSystemPrompt(persona) {
     .map((t) => (t.cliente ? `Cliente: ${t.cliente}` : `${p.nombre}: ${t.maiko}`))
     .join("\n");
 
-  const ofertas = p.ofertas
-    .map((o) => `- ${o.nombre} (${o.precio}) -> ${o.para_quien}`)
-    .join("\n");
+  // A proposito no se le pasa ningun precio al modelo: si no los conoce,
+  // no puede decirlos por accidente.
+  const ofertas = p.ofertas.map((o) => `- ${o.nombre} -> ${o.para_quien}`).join("\n");
 
   return `Eres el asistente de escritura privado de ${p.nombre}, una creadora de contenido. NO hablas con el cliente: le propones a ${p.nombre} tres formas de responder, y ella elige y envia. Escribes SIEMPRE como si fueras ella, en primera persona.
 
@@ -77,6 +101,13 @@ Detectas tu misma la situacion a partir del mensaje y del contexto. Si el usuari
 # QUE PUEDE OFRECER (y solo esto)
 ${ofertas}
 
+# PRECIOS: NUNCA
+Esta es una regla absoluta. No digas nunca un precio, ni una cifra, ni un rango, ni
+"desde X", ni lo insinues, aunque el cliente lo pida de forma directa y repetida.
+Puedes llegar hasta el borde: mencionar que hay opciones, decir que le ensenas lo que
+tienes. Ahi te paras y dejas el hueco para que sea ${p.nombre} quien ponga la cifra.
+Si insiste, desvia con calma: "Te lo cuento ahora mismo" o "Dame un segundo y te digo".
+
 # LIMITES: cosas que ${p.nombre} NO hace
 ${p.limites.map((x) => `- ${x}`).join("\n")}
 Si el cliente pide algo que esta fuera de esta lista o dentro de los limites, NO lo prometas. Desvia con calma, sin cortar la conversacion y sin hacerle sentir mal.
@@ -95,10 +126,20 @@ Cada respuesta: 1-3 frases, tono de chat real, sin sonar a plantilla. Sin comill
 Devuelve el resultado en el formato JSON pedido, nada mas.`;
 }
 
-export function buildUserPrompt({ message, situation, notes }) {
+export function buildUserPrompt({ message, situation, notes, precio }) {
   const parts = [`Mensaje que acaba de escribir el cliente:\n"""\n${message}\n"""`];
   if (situation) {
     parts.push(`Situacion forzada por el usuario: ${situation}. Usa esta, no la que detectarias tu.`);
+  }
+  if (precio) {
+    // Unica excepcion a la regla de no decir precios: lo ha escrito ella.
+    parts.push(
+      `EXCEPCION AUTORIZADA SOBRE EL PRECIO. Para este mensaje concreto, ${loadPersona().nombre} ` +
+        `te autoriza a decir este precio, escrito por ella: "${precio}".\n` +
+        `Usalo tal cual, sin redondear ni cambiar la moneda ni inventar ningun otro numero. ` +
+        `Dilo con naturalidad dentro de la respuesta, sin que suene a lista de tarifas. ` +
+        `Ningun otro precio: solo ese.`
+    );
   }
   if (notes) {
     parts.push(`Contexto adicional que aporta ${loadPersona().nombre}:\n"""\n${notes}\n"""`);

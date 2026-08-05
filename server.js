@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import cookieParser from "cookie-parser";
 
-import { loadPersona, SITUATIONS } from "./src/prompt.js";
+import { loadPersona, savePersona, SITUATIONS } from "./src/prompt.js";
 import {
   generarRespuestas,
   probarClave,
@@ -135,6 +135,62 @@ app.get("/api/persona", requireAuth, (req, res) => {
   });
 });
 
+/**
+ * Guarda el estilo editado desde la pagina de Estilo.
+ * Las listas llegan como texto, una linea por elemento.
+ */
+app.put("/api/persona", requireAuth, (req, res) => {
+  const lineas = (v) =>
+    String(v ?? "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+  const parcial = {};
+  const b = req.body ?? {};
+
+  if (typeof b.identidad === "string") parcial.identidad = lineas(b.identidad);
+  if (typeof b.reglas_de_oro === "string") parcial.reglas_de_oro = lineas(b.reglas_de_oro);
+  if (typeof b.prohibido_decir === "string") parcial.prohibido_decir = lineas(b.prohibido_decir);
+  if (typeof b.limites === "string") parcial.limites = lineas(b.limites);
+
+  // "nombre del pack | para quien"  (sin precio: el asistente nunca lo dice)
+  if (typeof b.ofertas === "string") {
+    parcial.ofertas = lineas(b.ofertas).map((l) => {
+      const [nombre, para] = l.split("|").map((x) => (x ?? "").trim());
+      return { nombre, para_quien: para || "" };
+    });
+  }
+
+  // { saludo: {objetivo, guia}, ... } — solo las situaciones conocidas
+  if (b.situaciones && typeof b.situaciones === "object") {
+    const actual = loadPersona({ reload: true }).situaciones;
+    const nuevas = { ...actual };
+    for (const clave of SITUATIONS) {
+      const s = b.situaciones[clave];
+      if (!s) continue;
+      nuevas[clave] = {
+        ...actual[clave],
+        objetivo: String(s.objetivo ?? actual[clave]?.objetivo ?? "").trim(),
+        guia: String(s.guia ?? actual[clave]?.guia ?? "").trim(),
+      };
+    }
+    parcial.situaciones = nuevas;
+  }
+
+  if (Object.keys(parcial).length === 0) {
+    return res.status(400).json({ error: "No has cambiado nada." });
+  }
+
+  try {
+    savePersona(parcial);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[persona]", err?.message ?? err);
+    res.status(500).json({ error: "No se ha podido guardar. Reintenta." });
+  }
+});
+
 /* ------------------------------------------------------------- ajustes --- */
 
 app.get("/api/ajustes", requireAuth, (req, res) => {
@@ -213,6 +269,7 @@ app.post("/api/generate", requireAuth, async (req, res) => {
   const mensaje = String(req.body?.mensaje ?? "").trim();
   const situacion = SITUATIONS.includes(req.body?.situacion) ? req.body.situacion : null;
   const notas = String(req.body?.notas ?? "").trim().slice(0, 2000);
+  const precio = String(req.body?.precio ?? "").trim().slice(0, 60);
 
   if (!mensaje) return res.status(400).json({ error: "Falta el mensaje del cliente." });
   if (mensaje.length > 6000) return res.status(400).json({ error: "El mensaje es demasiado largo." });
@@ -224,7 +281,7 @@ app.post("/api/generate", requireAuth, async (req, res) => {
   }
 
   try {
-    res.json(await generarRespuestas({ mensaje, situacion, notas }));
+    res.json(await generarRespuestas({ mensaje, situacion, notas, precio }));
   } catch (err) {
     const { status, mensaje: texto } = traducirError(err);
     console.error("[generate]", err?.status ?? "", err?.message ?? err);
@@ -249,6 +306,10 @@ app.get("/instrucciones", requireAuth, (req, res) => {
 
 app.get("/ajustes", requireAuth, (req, res) => {
   res.sendFile(path.join(here, "views", "ajustes.html"));
+});
+
+app.get("/estilo", requireAuth, (req, res) => {
+  res.sendFile(path.join(here, "views", "estilo.html"));
 });
 
 // Solo CSS y JS. Las paginas viven en views/ y se sirven detras de requireAuth,

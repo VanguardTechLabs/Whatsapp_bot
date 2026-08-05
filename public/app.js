@@ -20,14 +20,19 @@ const el = {
   bannerDemo: $("banner-demo"),
   demoMotivo: $("demo-motivo"),
   toast: $("toast"),
+  otra: $("otra"),
+  usarPrecio: $("usar-precio"),
+  precio: $("precio"),
 };
 
 const ETIQUETAS = {
-  nuevo: "Cliente nuevo",
-  casual: "Conversacion casual",
-  interesado: "Interesado, no compra",
-  reconexion: "Hace tiempo que no escribe",
-  habitual: "Cliente habitual",
+  saludo: "Solo dice hola",
+  elogio: "Manda un elogio",
+  emoji: "Manda un emoji",
+  conversador: "Conversa bastante",
+  ausente: "Lleva tiempo sin escribir",
+  recuperar: "Ya compro, hay que recuperarlo",
+  mirando: "Habla mucho pero no compra",
 };
 
 // El asistente responde en el mismo idioma en que escribio el cliente.
@@ -131,7 +136,11 @@ async function generar() {
     const res = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mensaje, situacion: el.situacion.value || null }),
+      body: JSON.stringify({
+        mensaje,
+        situacion: el.situacion.value || null,
+        precio: el.usarPrecio.checked ? el.precio.value.trim() : "",
+      }),
     });
 
     if (res.status === 401) {
@@ -155,6 +164,7 @@ async function generar() {
     }
 
     pintar(mensaje, data);
+    el.otra.classList.remove("hidden");
     if (data._meta?.simulado) {
       estado("Modo de prueba: respuestas de ejemplo, no las escribe la IA.", "off");
     } else {
@@ -308,6 +318,13 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     copiar(Number(e.key) - 1);
   }
+});
+
+el.otra.addEventListener("click", () => generar());
+
+el.usarPrecio.addEventListener("change", () => {
+  el.precio.classList.toggle("hidden", !el.usarPrecio.checked);
+  if (el.usarPrecio.checked) el.precio.focus();
 });
 
 window.addEventListener("focus", intentarPegadoAutomatico);
