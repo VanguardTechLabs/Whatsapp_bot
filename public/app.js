@@ -348,6 +348,22 @@ el.salir.addEventListener("click", async () => {
 
 /* ---------------------------------------------------------------- inicio */
 
+// Instalable en la pantalla de inicio: asi se cambia con el selector de
+// aplicaciones en vez de buscar una pestana perdida en el navegador.
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
+// Texto que llega compartido desde otra aplicacion: se genera directamente.
+{
+  const compartido = new URLSearchParams(location.search).get("compartido");
+  if (compartido) {
+    history.replaceState(null, "", "/");
+    el.mensaje.value = compartido;
+    generar();
+  }
+}
+
 if (puedeLeerPortapapeles()) {
   estado("Pegado automatico activo: copia el mensaje y vuelve a esta pestana.", "on");
 } else {

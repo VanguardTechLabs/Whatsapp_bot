@@ -355,6 +355,19 @@ app.get("/estilo", requireAuth, (req, res) => {
   res.sendFile(path.join(here, "views", "estilo.html"));
 });
 
+/**
+ * Llega aqui cuando comparte texto desde otra aplicacion (Android).
+ * Se pasa el texto a la pantalla principal para que genere sin tocar nada mas.
+ */
+app.get("/compartido", requireAuth, (req, res) => {
+  const texto = [req.query.text, req.query.title, req.query.url]
+    .filter((x) => typeof x === "string" && x.trim())
+    .join(" ")
+    .trim()
+    .slice(0, 6000);
+  res.redirect("/?compartido=" + encodeURIComponent(texto));
+});
+
 // Solo CSS y JS. Las paginas viven en views/ y se sirven detras de requireAuth,
 // para que no se puedan pedir directamente saltandose el login.
 //

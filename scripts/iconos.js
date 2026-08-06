@@ -226,8 +226,10 @@ ${barras}
 fs.writeFileSync(path.join(salida, "icono.svg"), svg());
 fs.writeFileSync(path.join(salida, "favicon.ico"), ico([16, 32]));
 fs.writeFileSync(path.join(salida, "icono-180.png"), png(180, pintar(180)));
+fs.writeFileSync(path.join(salida, "icono-192.png"), png(192, pintar(192)));
+fs.writeFileSync(path.join(salida, "icono-512.png"), png(512, pintar(512)));
 
-for (const f of ["icono.svg", "favicon.ico", "icono-180.png"]) {
+for (const f of ["icono.svg", "favicon.ico", "icono-180.png", "icono-192.png", "icono-512.png"]) {
   const { size } = fs.statSync(path.join(salida, f));
   console.log(`  ${f.padEnd(16)} ${size} bytes`);
 }

@@ -1,0 +1,28 @@
+{
+  "name": "Asistente de respuestas",
+  "short_name": "Asistente",
+  "description": "Traduce el mensaje del cliente y propone tres respuestas listas para enviar.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#100d13",
+  "theme_color": "#100d13",
+  "lang": "es",
+  "icons": [
+    { "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icono-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "/compartido",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}
