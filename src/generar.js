@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { loadPersona, buildSystemPrompt, buildUserPrompt, RESPONSE_SCHEMA } from "./prompt.js";
 import { generarSimulado } from "./simulado.js";
 import { claveEfectiva, modeloEfectivo } from "./ajustes.js";
+import { contextoParaPrompt } from "./clientes.js";
 
 const REASONING_EFFORT = (process.env.REASONING_EFFORT || "").trim();
 
@@ -64,11 +65,11 @@ function esProblemaDeConfiguracion(err) {
   return false;
 }
 
-export async function generarRespuestas({ mensaje, situacion = null, notas = "", precio = "" }) {
+export async function generarRespuestas({ mensaje, situacion = null, notas = "", precio = "", clienteId = "" }) {
   if (MODO_SIMULADO) return generarSimulado({ mensaje, situacion });
 
   try {
-    return await generarConAPI({ mensaje, situacion, notas, precio });
+    return await generarConAPI({ mensaje, situacion, notas, precio, clienteId });
   } catch (err) {
     if (!FALLBACK || !esProblemaDeConfiguracion(err)) throw err;
 
@@ -81,7 +82,7 @@ export async function generarRespuestas({ mensaje, situacion = null, notas = "",
   }
 }
 
-async function generarConAPI({ mensaje, situacion, notas, precio }) {
+async function generarConAPI({ mensaje, situacion, notas, precio, clienteId }) {
   const persona = loadPersona();
   const modelo = modeloEfectivo();
   const t0 = Date.now();
@@ -93,7 +94,13 @@ async function generarConAPI({ mensaje, situacion, notas, precio }) {
     max_completion_tokens: 8000,
     messages: [
       { role: "system", content: buildSystemPrompt(persona) },
-      { role: "user", content: buildUserPrompt({ message: mensaje, situation: situacion, notes: notas, precio }) },
+      { role: "user", content: buildUserPrompt({
+        message: mensaje,
+        situation: situacion,
+        notes: notas,
+        precio,
+        contexto: clienteId ? contextoParaPrompt(clienteId) : "",
+      }) },
     ],
     response_format: {
       type: "json_schema",

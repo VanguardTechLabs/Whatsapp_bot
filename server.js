@@ -27,6 +27,15 @@ import {
   verificarPassword,
   guardarPassword,
 } from "./src/ajustes.js";
+import {
+  listarClientes,
+  obtenerCliente,
+  crearCliente,
+  actualizarCliente,
+  borrarCliente,
+  anotarMensaje,
+  anotarDetalle,
+} from "./src/clientes.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -234,6 +243,46 @@ app.put("/api/persona", requireAuth, (req, res) => {
   }
 });
 
+/* ------------------------------------------------------------- clientes --- */
+
+app.get("/api/clientes", requireAuth, (req, res) => {
+  res.json({ clientes: listarClientes() });
+});
+
+app.post("/api/clientes", requireAuth, (req, res) => {
+  const nombre = String(req.body?.nombre ?? "").trim();
+  if (!nombre) return res.status(400).json({ error: "Ponle un nombre para reconocerlo." });
+  res.json(crearCliente({ nombre, etiqueta: req.body?.etiqueta }));
+});
+
+app.get("/api/clientes/:id", requireAuth, (req, res) => {
+  const c = obtenerCliente(req.params.id);
+  if (!c) return res.status(404).json({ error: "Ese cliente ya no existe." });
+  res.json(c);
+});
+
+app.put("/api/clientes/:id", requireAuth, (req, res) => {
+  const c = actualizarCliente(req.params.id, req.body ?? {});
+  if (!c) return res.status(404).json({ error: "Ese cliente ya no existe." });
+  res.json(c);
+});
+
+app.delete("/api/clientes/:id", requireAuth, (req, res) => {
+  if (!borrarCliente(req.params.id)) {
+    return res.status(404).json({ error: "Ese cliente ya no existe." });
+  }
+  res.json({ ok: true });
+});
+
+/** Se llama al copiar una respuesta: asi queda guardado lo que se envio. */
+app.post("/api/clientes/:id/enviado", requireAuth, (req, res) => {
+  const texto = String(req.body?.texto ?? "").trim();
+  if (!texto) return res.status(400).json({ error: "Falta el texto." });
+  const c = anotarMensaje(req.params.id, "maiko", texto);
+  if (!c) return res.status(404).json({ error: "Ese cliente ya no existe." });
+  res.json({ ok: true, mensajes: c.historial.length });
+});
+
 /* ------------------------------------------------------------- ajustes --- */
 
 app.get("/api/ajustes", requireAuth, (req, res) => {
@@ -313,6 +362,7 @@ app.post("/api/generate", requireAuth, async (req, res) => {
   const situacion = SITUATIONS.includes(req.body?.situacion) ? req.body.situacion : null;
   const notas = String(req.body?.notas ?? "").trim().slice(0, 2000);
   const precio = String(req.body?.precio ?? "").trim().slice(0, 60);
+  const clienteId = String(req.body?.cliente ?? "").trim();
 
   if (!mensaje) return res.status(400).json({ error: "Falta el mensaje del cliente." });
   if (mensaje.length > 6000) return res.status(400).json({ error: "El mensaje es demasiado largo." });
@@ -324,7 +374,15 @@ app.post("/api/generate", requireAuth, async (req, res) => {
   }
 
   try {
-    res.json(await generarRespuestas({ mensaje, situacion, notas, precio }));
+    const datos = await generarRespuestas({ mensaje, situacion, notas, precio, clienteId });
+
+    // Memoria: se apunta lo que dijo el cliente y lo que haya contado de si mismo.
+    if (clienteId && obtenerCliente(clienteId)) {
+      anotarMensaje(clienteId, "cliente", mensaje);
+      if (datos.detalle_para_recordar) anotarDetalle(clienteId, datos.detalle_para_recordar);
+    }
+
+    res.json(datos);
   } catch (err) {
     const { status, mensaje: texto } = traducirError(err);
     console.error("[generate]", err?.status ?? "", err?.message ?? err);

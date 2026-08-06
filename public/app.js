@@ -20,6 +20,9 @@ const el = {
   bannerDemo: $("banner-demo"),
   demoMotivo: $("demo-motivo"),
   toast: $("toast"),
+  cliente: $("cliente"),
+  nuevoCliente: $("nuevo-cliente"),
+  fichaCliente: $("ficha-cliente"),
   otra: $("otra"),
   usarPrecio: $("usar-precio"),
   precio: $("precio"),
@@ -92,6 +95,88 @@ function mostrarEsqueleto() {
   );
 }
 
+/* -------------------------------------------------------------- clientes */
+
+const CLIENTE_RECORDADO = "ultimo_cliente";
+
+async function cargarClientes() {
+  try {
+    const r = await fetch("/api/clientes");
+    if (!r.ok) return;
+    const { clientes } = await r.json();
+    const elegido = el.cliente.value || localStorage.getItem(CLIENTE_RECORDADO) || "";
+
+    el.cliente.replaceChildren(
+      Object.assign(document.createElement("option"), {
+        value: "",
+        textContent: "Sin cliente (no recuerda nada)",
+      }),
+      ...clientes.map((c) =>
+        Object.assign(document.createElement("option"), {
+          value: c.id,
+          textContent: c.nombre + (c.mensajes ? ` · ${c.mensajes} mensajes` : ""),
+        })
+      )
+    );
+    if (clientes.some((c) => c.id === elegido)) el.cliente.value = elegido;
+    await pintarFicha();
+  } catch { /* sin conexion: se sigue pudiendo usar sin cliente */ }
+}
+
+/** Muestra lo que el asistente recuerda de esta persona. */
+async function pintarFicha() {
+  const id = el.cliente.value;
+  try { localStorage.setItem(CLIENTE_RECORDADO, id); } catch {}
+
+  if (!id) return el.fichaCliente.classList.add("hidden");
+
+  const r = await fetch("/api/clientes/" + id);
+  if (!r.ok) return el.fichaCliente.classList.add("hidden");
+  const c = await r.json();
+
+  el.fichaCliente.replaceChildren();
+
+  const tDet = document.createElement("div");
+  tDet.className = "titulo";
+  tDet.textContent = "Lo que sabe de el";
+  el.fichaCliente.append(tDet);
+
+  if (c.detalles?.length) {
+    const ul = document.createElement("ul");
+    for (const d of c.detalles) {
+      const li = document.createElement("li");
+      li.textContent = d;
+      ul.append(li);
+    }
+    el.fichaCliente.append(ul);
+  } else {
+    const p = document.createElement("p");
+    p.className = "vacio";
+    p.style.margin = "0 0 12px";
+    p.textContent = "Todavia nada. Se ira apuntando solo segun hableis.";
+    el.fichaCliente.append(p);
+  }
+
+  const recientes = (c.historial ?? []).slice(-8);
+  if (recientes.length) {
+    const tHist = document.createElement("div");
+    tHist.className = "titulo";
+    tHist.textContent = "Ultimos mensajes";
+    const hilo = document.createElement("div");
+    hilo.className = "hilo";
+    for (const m of recientes) {
+      const linea = document.createElement("div");
+      linea.className = "linea " + (m.de === "cliente" ? "de-cliente" : "de-maiko");
+      linea.textContent = m.texto;
+      hilo.append(linea);
+    }
+    el.fichaCliente.append(tHist, hilo);
+    setTimeout(() => (hilo.scrollTop = hilo.scrollHeight), 0);
+  }
+
+  el.fichaCliente.classList.remove("hidden");
+}
+
 /* ---------------------------------------------------------- portapapeles */
 
 const puedeLeerPortapapeles = () =>
@@ -140,6 +225,7 @@ async function generar() {
         mensaje,
         situacion: el.situacion.value || null,
         precio: el.usarPrecio.checked ? el.precio.value.trim() : "",
+        cliente: el.cliente.value || "",
       }),
     });
 
@@ -165,6 +251,7 @@ async function generar() {
 
     pintar(mensaje, data);
     el.otra.classList.remove("hidden");
+    if (el.cliente.value) pintarFicha();
     if (data._meta?.simulado) {
       estado("Modo de prueba: respuestas de ejemplo, no las escribe la IA.", "off");
     } else {
@@ -280,6 +367,14 @@ async function copiar(indice) {
       btn.classList.remove("done");
     }, 1600);
   }
+  if (el.cliente.value) {
+    fetch("/api/clientes/" + el.cliente.value + "/enviado", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto }),
+    }).then(() => pintarFicha()).catch(() => {});
+  }
+
   toast("Copiado — pegalo y envialo");
   estado("Copiado. Pegalo en OnlyFans y envialo.", "on");
 }
@@ -322,6 +417,24 @@ document.addEventListener("keydown", (e) => {
 
 el.otra.addEventListener("click", () => generar());
 
+el.cliente.addEventListener("change", pintarFicha);
+
+el.nuevoCliente.addEventListener("click", async () => {
+  const nombre = prompt("Como quieres llamar a este cliente? (solo lo ves tu)");
+  if (!nombre || !nombre.trim()) return;
+  const r = await fetch("/api/clientes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nombre: nombre.trim() }),
+  });
+  if (!r.ok) return error("No se ha podido crear.");
+  const c = await r.json();
+  await cargarClientes();
+  el.cliente.value = c.id;
+  await pintarFicha();
+  toast("Cliente creado");
+});
+
 el.usarPrecio.addEventListener("change", () => {
   el.precio.classList.toggle("hidden", !el.usarPrecio.checked);
   if (el.usarPrecio.checked) el.precio.focus();
@@ -363,6 +476,8 @@ if ("serviceWorker" in navigator) {
     generar();
   }
 }
+
+cargarClientes();
 
 if (puedeLeerPortapapeles()) {
   estado("Pegado automatico activo: copia el mensaje y vuelve a esta pestana.", "on");

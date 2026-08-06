@@ -126,8 +126,11 @@ Cada respuesta: 1-3 frases, tono de chat real, sin sonar a plantilla. Sin comill
 Devuelve el resultado en el formato JSON pedido, nada mas.`;
 }
 
-export function buildUserPrompt({ message, situation, notes, precio }) {
-  const parts = [`Mensaje que acaba de escribir el cliente:\n"""\n${message}\n"""`];
+export function buildUserPrompt({ message, situation, notes, precio, contexto }) {
+  const parts = [];
+  // Quien es el cliente y que os habeis dicho antes, si es que hay historial.
+  if (contexto) parts.push(contexto);
+  parts.push(`Mensaje que acaba de escribir el cliente:\n"""\n${message}\n"""`);
   if (situation) {
     parts.push(`Situacion forzada por el usuario: ${situation}. Usa esta, no la que detectarias tu.`);
   }
@@ -168,6 +171,11 @@ export const RESPONSE_SCHEMA = {
       type: "string",
       description: "Una frase corta, en espanol, explicando por que esa situacion.",
     },
+    detalle_para_recordar: {
+      type: "string",
+      description:
+        "Si en este mensaje el cliente ha contado algo concreto sobre el que convenga recordar para otro dia (su trabajo, un gusto, un plan, algo personal), resumelo en una frase corta en espanol. Si no ha contado nada nuevo, devuelve una cadena vacia.",
+    },
     respuestas: {
       type: "array",
       description: "Exactamente 3 respuestas distintas.",
@@ -194,6 +202,13 @@ export const RESPONSE_SCHEMA = {
       },
     },
   },
-  required: ["idioma_cliente", "mensaje_en_espanol", "situacion", "motivo_situacion", "respuestas"],
+  required: [
+    "idioma_cliente",
+    "mensaje_en_espanol",
+    "situacion",
+    "motivo_situacion",
+    "detalle_para_recordar",
+    "respuestas",
+  ],
   additionalProperties: false,
 };
