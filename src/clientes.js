@@ -106,7 +106,14 @@ export function anotarMensaje(id, de, texto) {
   if (!c || !texto) return null;
 
   c.historial = c.historial ?? [];
-  c.historial.push({ de, texto: String(texto).slice(0, 2000), cuando: new Date().toISOString() });
+
+  // Al pulsar "generar otras respuestas" llega el mismo mensaje otra vez.
+  // Si se apuntara, el modelo creeria que el cliente se ha repetido.
+  const limpio = String(texto).slice(0, 2000);
+  const ultimo = c.historial[c.historial.length - 1];
+  if (ultimo && ultimo.de === de && ultimo.texto === limpio) return c;
+
+  c.historial.push({ de, texto: limpio, cuando: new Date().toISOString() });
   if (c.historial.length > MAX_GUARDADO) c.historial = c.historial.slice(-MAX_GUARDADO);
   c.actualizado = new Date().toISOString();
 

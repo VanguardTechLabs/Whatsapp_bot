@@ -44,20 +44,4 @@ export function prepararDatos() {
   return DATOS;
 }
 
-/** Escritura atomica: primero a un temporal y luego se renombra. */
-export function escribirJson(nombre, datos, opciones = {}) {
-  const destino = rutaDatos(nombre);
-  const tmp = destino + ".tmp";
-  fs.writeFileSync(tmp, JSON.stringify(datos, null, 2) + "\n", opciones);
-  fs.renameSync(tmp, destino);
-}
-
-export function leerJson(nombre, porDefecto) {
-  try {
-    return JSON.parse(fs.readFileSync(rutaDatos(nombre), "utf8"));
-  } catch {
-    return porDefecto;
-  }
-}
-
 prepararDatos();

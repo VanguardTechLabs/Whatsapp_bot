@@ -134,12 +134,14 @@ app.post("/api/logout", (req, res) => {
 });
 
 app.get("/api/me", (req, res) => {
+  // Sin sesion no se cuenta nada: el nombre de usuario es media contraseña.
+  if (!isLoggedIn(req)) {
+    return res.json({ autenticado: false, usuario: null, clave_configurada: hayPassword() });
+  }
   res.json({
-    autenticado: isLoggedIn(req),
-    usuario: isLoggedIn(req) ? APP_USER : null,
-    // Para diagnosticar sin exponer nada: que usuario espera y si hay clave.
-    usuario_esperado: APP_USER,
-    clave_configurada: hayPassword(),
+    autenticado: true,
+    usuario: APP_USER,
+    clave_configurada: true,
     clave_propia: passwordPropia(),
     en_produccion: process.env.NODE_ENV === "production",
   });
