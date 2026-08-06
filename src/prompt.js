@@ -1,9 +1,7 @@
 import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { rutaDatos } from "./datos.js";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const personaPath = path.join(here, "..", "config", "persona.json");
+const personaPath = rutaDatos("persona.json");
 
 let cached = null;
 

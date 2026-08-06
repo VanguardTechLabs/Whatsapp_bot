@@ -8,12 +8,10 @@
  * Prioridad: lo guardado desde la web  >  lo que haya en .env.
  */
 import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { rutaDatos } from "./datos.js";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const fichero = path.join(here, "..", "config", "ajustes.json");
+const fichero = rutaDatos("ajustes.json");
 
 const VACIO = {
   openai_api_key: "",

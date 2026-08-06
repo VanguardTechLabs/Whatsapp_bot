@@ -215,7 +215,36 @@ Acordado por escrito con la clienta como segunda fase, no incluido en los 190 US
 
 ---
 
-## 6. Despliegue
+## 6. Los datos que se guardan (importante al desplegar)
+
+La aplicación escribe tres ficheros:
+
+| Fichero | Qué guarda |
+|---|---|
+| `ajustes.json` | clave de OpenAI, modelo y la contraseña de acceso (con scrypt) |
+| `clientes.json` | los clientes, sus detalles y el historial de conversación |
+| `persona.json` | el estilo, editado desde la página **Estilo** |
+
+Por defecto van a `config/`. **En un servidor eso no vale**: Railway y similares
+borran el disco en cada despliegue, así que se perderían los clientes, las
+conversaciones y el estilo que ella haya ajustado.
+
+La solución es un volumen y una variable:
+
+```
+DATA_DIR=/data
+```
+
+En Railway: **Settings → Volumes → Add Volume**, punto de montaje `/data`.
+
+El `config/persona.json` del repositorio pasa a ser solo la **plantilla**: la
+primera vez se copia al volumen y a partir de ahí se edita la copia. Así un
+despliegue nuevo nunca pisa lo que ella haya cambiado.
+
+> No montes el volumen en `/app/config`: taparía la plantilla del repositorio y
+> el primer arranque se quedaría sin estilo.
+
+## 7. Despliegue
 
 Necesita **HTTPS** para que funcione el pegado automático del portapapeles
 (los navegadores solo lo permiten en contexto seguro; en `localhost` también funciona).

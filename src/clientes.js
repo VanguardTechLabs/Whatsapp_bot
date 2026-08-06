@@ -10,12 +10,10 @@
  * volver a desplegar.
  */
 import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { rutaDatos } from "./datos.js";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const fichero = path.join(here, "..", "config", "clientes.json");
+const fichero = rutaDatos("clientes.json");
 
 /** Cuantos mensajes recientes se le pasan al modelo. */
 export const MAX_HISTORIAL = 12;
