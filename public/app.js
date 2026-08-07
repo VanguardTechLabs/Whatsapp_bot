@@ -200,6 +200,96 @@ async function intentarPegadoAutomatico() {
 
 /* -------------------------------------------------------------- generar */
 
+/** Deja el hueco listo: tres tarjetas grises que se van rellenando. */
+function prepararResultado(original) {
+  el.original.textContent = original;
+  el.traduccion.textContent = "";
+  el.chip.textContent = "";
+  el.chipIdioma.textContent = "";
+  el.motivo.textContent = "";
+  el.bloqueTraduccion.classList.remove("hidden");
+  el.bannerDemo.classList.add("hidden");
+  el.meta.textContent = "";
+  respuestasActuales = [];
+  mostrarEsqueleto();
+}
+
+function mostrarTraduccion(texto) {
+  el.traduccion.textContent = texto || "";
+}
+
+function mostrarSituacion(situacion, idioma, motivo) {
+  el.chip.textContent = ETIQUETAS[situacion] || situacion || "";
+  const codigo = (idioma || "").toLowerCase();
+  el.chipIdioma.textContent = codigo ? "Responde en " + (IDIOMAS[codigo] || codigo) : "";
+  el.chipIdioma.classList.toggle("hidden", !codigo);
+  el.motivo.textContent = motivo || "";
+}
+
+/** Sustituye la tarjeta gris numero i por la respuesta de verdad. */
+function mostrarRespuesta(i, r) {
+  respuestasActuales[i] = r;
+
+  const card = document.createElement("div");
+  card.className = "reply";
+
+  const top = document.createElement("div");
+  top.className = "top";
+
+  const izq = document.createElement("div");
+  const num = document.createElement("span");
+  num.className = "num";
+  num.textContent = i + 1;
+  const chip = document.createElement("span");
+  chip.className = "chip";
+  chip.textContent = r.etiqueta || "";
+  izq.append(num, chip);
+
+  const btn = document.createElement("button");
+  btn.className = "copy";
+  btn.type = "button";
+  btn.textContent = "Copiar";
+  btn.addEventListener("click", () => copiar(i));
+
+  top.append(izq, btn);
+
+  const en = document.createElement("div");
+  en.className = "en";
+  en.textContent = r.texto || "";
+
+  const es = document.createElement("div");
+  es.className = "es";
+  es.textContent = r.espanol || "";
+
+  card.append(top, en, es);
+
+  const hueco = el.respuestas.children[i];
+  if (hueco) el.respuestas.replaceChild(card, hueco);
+  else el.respuestas.append(card);
+}
+
+function terminar(meta = {}) {
+  // Sobran tarjetas grises si vinieron menos de tres respuestas.
+  while (el.respuestas.children.length > respuestasActuales.filter(Boolean).length) {
+    el.respuestas.lastElementChild.remove();
+  }
+
+  if (meta.simulado) {
+    el.demoMotivo.textContent = meta.motivo_fallback
+      ? "Motivo: " + meta.motivo_fallback
+      : "El asistente esta en modo de prueba y no esta conectado a la IA.";
+    el.bannerDemo.classList.remove("hidden");
+    for (const card of el.respuestas.children) card.classList.add("demo");
+    el.meta.textContent = "Respuestas de ejemplo";
+    el.meta.style.color = "var(--danger)";
+    estado("Modo de prueba: respuestas de ejemplo, no las escribe la IA.", "off");
+  } else {
+    el.meta.textContent = meta.ms ? `${(meta.ms / 1000).toFixed(1)} s · ${meta.modelo || ""}` : "";
+    el.meta.style.color = "";
+    estado("Listo. Pulsa 1, 2 o 3 para copiar.", "on");
+  }
+}
+
 async function generar() {
   const mensaje = el.mensaje.value.trim();
   if (!mensaje) {
@@ -213,9 +303,8 @@ async function generar() {
   el.generar.disabled = true;
   el.generar.textContent = "Generando...";
   el.dot.className = "dot spinner";
-  el.estado.textContent = "Traduciendo y escribiendo respuestas...";
-  el.meta.textContent = "";
-  mostrarEsqueleto();
+  el.estado.textContent = "Traduciendo...";
+  prepararResultado(mensaje);
 
   try {
     const res = await fetch("/api/generate", {
@@ -226,6 +315,7 @@ async function generar() {
         situacion: el.situacion.value || null,
         precio: el.usarPrecio.checked ? el.precio.value.trim() : "",
         cliente: el.cliente.value || "",
+        directo: true,
       }),
     });
 
@@ -234,10 +324,11 @@ async function generar() {
       return;
     }
 
-    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      el.respuestas.replaceChildren();
+      el.bloqueTraduccion.classList.add("hidden");
       if (data.falta_clave) {
-        el.respuestas.replaceChildren();
         el.error.replaceChildren(
           document.createTextNode(data.error + " "),
           Object.assign(document.createElement("a"), { href: "/ajustes", textContent: "Ir a Ajustes" })
@@ -249,14 +340,43 @@ async function generar() {
       throw new Error(data.error || "No se pudo generar la respuesta.");
     }
 
-    pintar(mensaje, data);
+    // Va llegando linea a linea: cada una es un trozo ya terminado.
+    const lector = res.body.getReader();
+    const dec = new TextDecoder();
+    let resto = "";
+    let fallo = null;
+
+    while (true) {
+      const { done, value } = await lector.read();
+      if (done) break;
+      resto += dec.decode(value, { stream: true });
+      const lineas = resto.split("\n");
+      resto = lineas.pop();
+
+      for (const linea of lineas) {
+        if (!linea.trim()) continue;
+        let e;
+        try { e = JSON.parse(linea); } catch { continue; }
+
+        if (e.t === "traduccion") {
+          mostrarTraduccion(e.texto);
+          el.estado.textContent = "Escribiendo respuestas...";
+        } else if (e.t === "situacion") {
+          mostrarSituacion(e.situacion, e.idioma, e.motivo);
+        } else if (e.t === "respuesta") {
+          mostrarRespuesta(e.i, { etiqueta: e.etiqueta, texto: e.texto, espanol: e.espanol });
+        } else if (e.t === "fin") {
+          terminar(e._meta || {});
+        } else if (e.t === "error") {
+          fallo = e.mensaje;
+        }
+      }
+    }
+
+    if (fallo) throw new Error(fallo);
+
     el.otra.classList.remove("hidden");
     if (el.cliente.value) pintarFicha();
-    if (data._meta?.simulado) {
-      estado("Modo de prueba: respuestas de ejemplo, no las escribe la IA.", "off");
-    } else {
-      estado("Listo. Pulsa 1, 2 o 3 para copiar.", "on");
-    }
   } catch (e) {
     el.respuestas.replaceChildren();
     error(e.message);
@@ -265,76 +385,6 @@ async function generar() {
     generando = false;
     el.generar.disabled = false;
     el.generar.textContent = "Pegar y generar respuestas";
-  }
-}
-
-/* --------------------------------------------------------------- pintar */
-
-function pintar(original, data) {
-  el.original.textContent = original;
-  el.traduccion.textContent = data.mensaje_en_espanol || "";
-  el.chip.textContent = ETIQUETAS[data.situacion] || data.situacion || "";
-
-  const codigo = (data.idioma_cliente || "").toLowerCase();
-  el.chipIdioma.textContent = codigo ? "Responde en " + (IDIOMAS[codigo] || codigo) : "";
-  el.chipIdioma.classList.toggle("hidden", !codigo);
-
-  el.motivo.textContent = data.motivo_situacion || "";
-  el.bloqueTraduccion.classList.remove("hidden");
-
-  respuestasActuales = data.respuestas || [];
-  el.respuestas.replaceChildren();
-
-  respuestasActuales.forEach((r, i) => {
-    const card = document.createElement("div");
-    card.className = "reply";
-
-    const top = document.createElement("div");
-    top.className = "top";
-
-    const izq = document.createElement("div");
-    const num = document.createElement("span");
-    num.className = "num";
-    num.textContent = i + 1;
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.textContent = r.etiqueta || "";
-    izq.append(num, chip);
-
-    const btn = document.createElement("button");
-    btn.className = "copy";
-    btn.type = "button";
-    btn.textContent = "Copiar";
-    btn.addEventListener("click", () => copiar(i));
-
-    top.append(izq, btn);
-
-    const en = document.createElement("div");
-    en.className = "en";
-    en.textContent = r.texto || "";
-
-    const es = document.createElement("div");
-    es.className = "es";
-    es.textContent = r.espanol || "";
-
-    card.append(top, en, es);
-    el.respuestas.append(card);
-  });
-
-  const m = data._meta || {};
-
-  if (m.simulado) {
-    el.demoMotivo.textContent = m.motivo_fallback
-      ? "Motivo: " + m.motivo_fallback
-      : "El asistente esta en modo de prueba y no esta conectado a la IA.";
-    el.bannerDemo.classList.remove("hidden");
-    for (const card of el.respuestas.children) card.classList.add("demo");
-    el.meta.textContent = "Respuestas de ejemplo";
-    el.meta.style.color = "var(--danger)";
-  } else {
-    el.bannerDemo.classList.add("hidden");
-    el.meta.textContent = m.ms ? `${(m.ms / 1000).toFixed(1)} s · ${m.modelo || ""}` : "";
-    el.meta.style.color = "";
   }
 }
 

@@ -3,6 +3,7 @@ import { loadPersona, buildSystemPrompt, buildUserPrompt, RESPONSE_SCHEMA } from
 import { generarSimulado } from "./simulado.js";
 import { claveEfectiva, modeloEfectivo } from "./ajustes.js";
 import { contextoParaPrompt } from "./clientes.js";
+import { parsearParcial } from "./jsonParcial.js";
 
 const REASONING_EFFORT = (process.env.REASONING_EFFORT || "").trim();
 
@@ -147,6 +148,156 @@ async function generarConAPI({ mensaje, situacion, notas, precio, clienteId }) {
   };
 
   return data;
+}
+
+/* ------------------------------------------------------------ en directo --- */
+
+/**
+ * Igual que generarRespuestas, pero va soltando lo que ya esta listo en vez de
+ * esperar al final. La traduccion aparece enseguida y cada respuesta en cuanto
+ * se termina de escribir: el tiempo total es parecido, pero la espera no.
+ *
+ * `emitir` recibe objetos { t: "traduccion" | "situacion" | "respuesta" | ... }.
+ * Devuelve el resultado completo, para poder guardarlo en la memoria.
+ */
+export async function generarRespuestasEnDirecto(opciones, emitir) {
+  const { mensaje, situacion = null, notas = "", precio = "", clienteId = "" } = opciones;
+
+  if (MODO_SIMULADO) return await emitirSimulado({ mensaje, situacion }, emitir);
+
+  try {
+    return await conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId }, emitir);
+  } catch (err) {
+    if (!FALLBACK || !esProblemaDeConfiguracion(err)) throw err;
+    const { mensaje: motivo } = traducirError(err);
+    console.warn("[fallback] Se pasa a modo simulado:", motivo);
+    return await emitirSimulado({ mensaje, situacion }, emitir, motivo);
+  }
+}
+
+/** Manda un resultado ya hecho (modo de prueba) con la misma forma de eventos. */
+async function emitirSimulado(opciones, emitir, motivo) {
+  const datos = await generarSimulado(opciones);
+  if (motivo) datos._meta.motivo_fallback = motivo;
+
+  emitir({ t: "traduccion", texto: datos.mensaje_en_espanol });
+  emitir({ t: "situacion", situacion: datos.situacion, idioma: datos.idioma_cliente, motivo: datos.motivo_situacion });
+  datos.respuestas.forEach((r, i) => emitir({ t: "respuesta", i, ...r }));
+  emitir({ t: "fin", _meta: datos._meta });
+  return datos;
+}
+
+async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId }, emitir) {
+  const persona = loadPersona();
+  const modelo = modeloEfectivo();
+  const t0 = Date.now();
+
+  const params = {
+    model: modelo,
+    max_completion_tokens: 8000,
+    stream: true,
+    stream_options: { include_usage: true },
+    messages: [
+      { role: "system", content: buildSystemPrompt(persona) },
+      {
+        role: "user",
+        content: buildUserPrompt({
+          message: mensaje,
+          situation: situacion,
+          notes: notas,
+          precio,
+          contexto: clienteId ? contextoParaPrompt(clienteId) : "",
+        }),
+      },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: { name: "respuesta_asistente", strict: true, schema: RESPONSE_SCHEMA },
+    },
+  };
+  if (REASONING_EFFORT && esModeloDeRazonamiento(modelo)) params.reasoning_effort = REASONING_EFFORT;
+
+  const flujo = await getCliente(claveEfectiva()).chat.completions.create(params);
+
+  let bruto = "";
+  let uso = null;
+  let modeloReal = modelo;
+
+  // Lo que ya se ha mandado, para no repetirlo.
+  let traduccionEnviada = false;
+  let situacionEnviada = false;
+  const respuestasEnviadas = new Set();
+
+  for await (const trozo of flujo) {
+    if (trozo.usage) uso = trozo.usage;
+    if (trozo.model) modeloReal = trozo.model;
+
+    const delta = trozo.choices?.[0]?.delta?.content;
+    if (!delta) continue;
+    bruto += delta;
+
+    const parcial = parsearParcial(bruto);
+    if (!parcial) continue;
+
+    if (!traduccionEnviada && parcial.mensaje_en_espanol) {
+      // Solo cuando la frase ya esta cerrada, para no mostrarla a trozos.
+      if (bruto.includes('"situacion"') || bruto.includes('"motivo_situacion"')) {
+        traduccionEnviada = true;
+        emitir({ t: "traduccion", texto: parcial.mensaje_en_espanol });
+      }
+    }
+    if (!situacionEnviada && parcial.motivo_situacion && parcial.situacion) {
+      if (bruto.includes('"detalle_para_recordar"') || bruto.includes('"respuestas"')) {
+        situacionEnviada = true;
+        emitir({
+          t: "situacion",
+          situacion: parcial.situacion,
+          idioma: parcial.idioma_cliente ?? "",
+          motivo: parcial.motivo_situacion,
+        });
+      }
+    }
+
+    for (const [i, r] of (parcial.respuestas ?? []).entries()) {
+      // Completa = tiene los tres campos. El ultimo puede estar a medias.
+      if (respuestasEnviadas.has(i) || !r?.etiqueta || !r?.texto || !r?.espanol) continue;
+      const esUltima = i === parcial.respuestas.length - 1;
+      if (esUltima && !bruto.trimEnd().endsWith("}") && !bruto.includes(`"espanol"`, bruto.lastIndexOf(r.espanol))) continue;
+      respuestasEnviadas.add(i);
+      emitir({ t: "respuesta", i, etiqueta: r.etiqueta, texto: r.texto, espanol: r.espanol });
+    }
+  }
+
+  const datos = JSON.parse(bruto);
+  datos.respuestas = (datos.respuestas ?? []).slice(0, 3);
+  if (datos.respuestas.length === 0) {
+    throw new ErrorGeneracion("vacio", "El modelo no devolvio ninguna respuesta.");
+  }
+
+  // Por si algo no llego a emitirse durante el flujo.
+  if (!traduccionEnviada) emitir({ t: "traduccion", texto: datos.mensaje_en_espanol });
+  if (!situacionEnviada) {
+    emitir({
+      t: "situacion",
+      situacion: datos.situacion,
+      idioma: datos.idioma_cliente,
+      motivo: datos.motivo_situacion,
+    });
+  }
+  datos.respuestas.forEach((r, i) => {
+    if (!respuestasEnviadas.has(i)) emitir({ t: "respuesta", i, ...r });
+  });
+
+  datos._meta = {
+    ms: Date.now() - t0,
+    modelo: modeloReal,
+    tokens_entrada: uso?.prompt_tokens ?? null,
+    tokens_salida: uso?.completion_tokens ?? null,
+    cache_leida: uso?.prompt_tokens_details?.cached_tokens ?? 0,
+  };
+  emitir({ t: "fin", _meta: datos._meta });
+
+  return datos;
 }
 
 /**

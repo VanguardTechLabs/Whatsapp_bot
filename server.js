@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import { loadPersona, savePersona, SITUATIONS } from "./src/prompt.js";
 import {
   generarRespuestas,
+  generarRespuestasEnDirecto,
   probarClave,
   listarModelos,
   traducirError,
@@ -373,6 +374,32 @@ app.post("/api/generate", requireAuth, async (req, res) => {
       error: "Todavia no has puesto tu clave. Entra en Ajustes y pegala ahi.",
       falta_clave: true,
     });
+  }
+
+  // En directo: se va mandando cada trozo segun se escribe, en lineas JSON.
+  if (req.body?.directo) {
+    res.writeHead(200, {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no", // que ningun proxy lo acumule
+    });
+    const emitir = (evento) => res.write(JSON.stringify(evento) + "\n");
+
+    try {
+      const datos = await generarRespuestasEnDirecto(
+        { mensaje, situacion, notas, precio, clienteId },
+        emitir
+      );
+      if (clienteId && obtenerCliente(clienteId)) {
+        anotarMensaje(clienteId, "cliente", mensaje);
+        if (datos.detalle_para_recordar) anotarDetalle(clienteId, datos.detalle_para_recordar);
+      }
+    } catch (err) {
+      const { mensaje: texto } = traducirError(err);
+      console.error("[generate/directo]", err?.status ?? "", err?.message ?? err);
+      emitir({ t: "error", mensaje: texto });
+    }
+    return res.end();
   }
 
   try {
