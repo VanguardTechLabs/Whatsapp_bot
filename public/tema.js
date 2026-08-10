@@ -10,13 +10,12 @@
  */
 
 window.PALETAS = [
+  { nombre: "Laton", oscuro: "#c9a227", oscuroInk: "#16150f", claro: "#856a11", claroInk: "#ffffff" },
+  { nombre: "Cobre", oscuro: "#c07a45", oscuroInk: "#180f08", claro: "#8a4f1c", claroInk: "#ffffff" },
+  { nombre: "Hueso", oscuro: "#ddd6c6", oscuroInk: "#16150f", claro: "#4a463b", claroInk: "#ffffff" },
   { nombre: "Rosa", oscuro: "#d4657f", oscuroInk: "#1a090f", claro: "#a83a58", claroInk: "#ffffff" },
-  { nombre: "Vino", oscuro: "#c1566b", oscuroInk: "#180810", claro: "#8e2f47", claroInk: "#ffffff" },
-  { nombre: "Coral", oscuro: "#e4795e", oscuroInk: "#1a0f0c", claro: "#c2543a", claroInk: "#ffffff" },
-  { nombre: "Ambar", oscuro: "#e3a851", oscuroInk: "#1e1508", claro: "#9a6410", claroInk: "#ffffff" },
-  { nombre: "Verde", oscuro: "#6fc79a", oscuroInk: "#08201a", claro: "#17754f", claroInk: "#ffffff" },
-  { nombre: "Azul", oscuro: "#7aa7f0", oscuroInk: "#0b142a", claro: "#2f5fb8", claroInk: "#ffffff" },
-  { nombre: "Violeta", oscuro: "#b18cf0", oscuroInk: "#150c28", claro: "#6f45c0", claroInk: "#ffffff" },
+  { nombre: "Jade", oscuro: "#5fae8f", oscuroInk: "#08201a", claro: "#17694c", claroInk: "#ffffff" },
+  { nombre: "Acero", oscuro: "#8fa3b8", oscuroInk: "#0d131a", claro: "#42586e", claroInk: "#ffffff" },
 ];
 
 (function () {

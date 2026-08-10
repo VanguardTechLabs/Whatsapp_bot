@@ -7,9 +7,8 @@
  *
  *   node scripts/iconos.js [colorFondo] [colorBarras]
  *
- * El dibujo: cuadrado redondeado y tres barras. Las dos primeras a la
- * izquierda y la tercera a la derecha, que es lo que hace que se lea como una
- * conversacion y no como una lista.
+ * El dibujo: dos cuadrados desplazados, uno sobre otro. Uno es lo que escribe
+ * el cliente y el otro lo que ella envia. Esquinas vivas, sin redondear.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -19,8 +18,8 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const salida = path.join(here, "..", "public");
 
-const FONDO = hexARgb(process.argv[2] || "#e4795e");
-const BARRA = hexARgb(process.argv[3] || "#1a0f0c");
+const FONDO = hexARgb(process.argv[2] || "#c9a227");
+const BARRA = hexARgb(process.argv[3] || "#16150f");
 
 function hexARgb(hex) {
   const h = hex.replace("#", "");
@@ -43,16 +42,15 @@ function distRect(px, py, cx, cy, mediaAncho, mediaAlto, r) {
 
 /** Proporciones del dibujo, en tanto por uno del lado. */
 const BARRAS = [
-  { x: 0.219, y: 0.281, w: 0.437, h: 0.106 },
-  { x: 0.219, y: 0.456, w: 0.312, h: 0.106 },
-  { x: 0.437, y: 0.631, w: 0.344, h: 0.106 },
+  { x: 0.16, y: 0.16, w: 0.34, h: 0.34 },
+  { x: 0.50, y: 0.50, w: 0.34, h: 0.34 },
 ];
 
 /** Devuelve un buffer RGBA de lado x lado, con antialiasing por supermuestreo. */
 function pintar(lado) {
   const buf = Buffer.alloc(lado * lado * 4);
   const M = 4; // 4x4 muestras por pixel
-  const rFondo = lado * 0.22;
+  const rFondo = lado * 0.02; // esquinas vivas, no pastilla
 
   for (let y = 0; y < lado; y++) {
     for (let x = 0; x < lado; x++) {
@@ -70,7 +68,7 @@ function pintar(lado) {
           for (const b of BARRAS) {
             const bx = b.x * lado, by = b.y * lado;
             const bw = b.w * lado, bh = b.h * lado;
-            const r = bh / 2;
+            const r = 0; // cuadrados, no pastillas
             if (distRect(px, py, bx + bw / 2, by + bh / 2, bw / 2, bh / 2, r) < 0) {
               dentroBarra++;
               break;
@@ -211,11 +209,11 @@ function svg() {
     (b) =>
       `  <rect x="${(b.x * 32).toFixed(2)}" y="${(b.y * 32).toFixed(2)}" ` +
       `width="${(b.w * 32).toFixed(2)}" height="${(b.h * 32).toFixed(2)}" ` +
-      `rx="${((b.h * 32) / 2).toFixed(2)}" fill="${process.argv[3] || "#1a0f0c"}"/>`
+      `fill="${process.argv[3] || "#16150f"}"/>`
   ).join("\n");
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="7.04" fill="${process.argv[2] || "#e4795e"}"/>
+  <rect width="32" height="32" fill="${process.argv[2] || "#c9a227"}"/>
 ${barras}
 </svg>
 `;
