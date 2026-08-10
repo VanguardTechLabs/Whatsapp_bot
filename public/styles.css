@@ -5,58 +5,65 @@
    ========================================================================== */
 
 :root {
-  /* superficies: negro con un punto de ciruela, no gris neutro */
-  --bg: #100d13;
-  --bg-elev: #191520;
-  --surface: #1c1824;
-  --surface-2: #24202d;
-  --border: #2c2635;
-  --border-strong: #3a3345;
+  /* Negro calido con fondo de vino, no gris ni azulado: la pantalla se usa
+     de noche y tiene que parecer una habitacion con la luz baja. */
+  --bg: #120b0e;
+  --bg-elev: #1b1115;
+  --surface: #1f1419;
+  --surface-2: #2a1d23;
+  --border: #37262d;
+  --border-strong: #4a333c;
 
-  --text: #f3eff5;
-  --muted: #a69eb0;
-  --faint: #6e6779;
+  --text: #f7ecef;
+  --muted: #b69ba4;
+  --faint: #816a74;
 
   /* Solo --accent y --accent-ink cambian al elegir color en Ajustes:
      los dos siguientes se derivan solos, asi nunca se descoordinan. */
-  --accent: #e4795e;
-  --accent-ink: #1a0f0c;
-  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
-  --accent-line: color-mix(in srgb, var(--accent) 45%, transparent);
+  /* Rosa viejo, no fucsia: sugiere en vez de gritar. */
+  --accent: #d4657f;
+  --accent-ink: #1a090f;
+  --accent-soft: color-mix(in srgb, var(--accent) 15%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 42%, transparent);
 
-  --ok: #77d4a8;
-  --ok-soft: rgba(119, 212, 168, 0.14);
-  --danger: #f07a7d;
-  --danger-soft: rgba(240, 122, 125, 0.12);
-  --warn: #e5a35f;
+  --ok: #8fcfae;
+  --ok-soft: rgba(143, 207, 174, 0.14);
+  --danger: #ef7378;
+  --danger-soft: rgba(239, 115, 120, 0.13);
+  --warn: #e0a05f;
 
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 20px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 22px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.55);
+  /* Sombras con un punto calido: negro puro corta demasiado. */
+  --shadow-sm: 0 1px 2px rgba(30, 8, 14, 0.4);
+  --shadow-md: 0 6px 22px -6px rgba(20, 5, 10, 0.55);
+  --shadow-lg: 0 16px 40px -10px rgba(16, 4, 8, 0.65);
 
+  /* Todo va un poco mas lento a proposito: la prisa mata la tension. */
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --lento: 0.28s;
+
+  --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
 }
 
 /* Tema claro. Se aplica cuando lo pide el sistema (salvo que se haya forzado
    el oscuro a mano) o cuando se elige "Claro" en Ajustes. */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #faf8fa;
+    --bg: #fbf5f6;
     --bg-elev: #ffffff;
     --surface: #ffffff;
-    --surface-2: #f3f0f5;
-    --border: #e5e0e9;
-    --border-strong: #d3ccd9;
+    --surface-2: #f6eef0;
+    --border: #ebdfe3;
+    --border-strong: #dcc9cf;
 
-    --text: #1a1620;
-    --muted: #625b6c;
-    --faint: #8e8799;
+    --text: #241419;
+    --muted: #6b555c;
+    --faint: #9a8188;
 
-    --accent: #c2543a;
+    --accent: #a83a58;
     --accent-ink: #ffffff;
 
     --ok: #17845a;
@@ -65,25 +72,25 @@
     --danger-soft: rgba(194, 65, 63, 0.08);
     --warn: #a4661f;
 
-    --shadow-sm: 0 1px 2px rgba(26, 22, 32, 0.06);
-    --shadow-md: 0 4px 16px -6px rgba(26, 22, 32, 0.14);
-    --shadow-lg: 0 14px 34px -10px rgba(26, 22, 32, 0.2);
+    --shadow-sm: 0 1px 2px rgba(60, 20, 32, 0.06);
+    --shadow-md: 0 4px 16px -6px rgba(60, 20, 32, 0.14);
+    --shadow-lg: 0 14px 34px -10px rgba(60, 20, 32, 0.2);
   }
 }
 
 :root[data-theme="light"] {
-  --bg: #faf8fa;
+  --bg: #fbf5f6;
   --bg-elev: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f3f0f5;
-  --border: #e5e0e9;
-  --border-strong: #d3ccd9;
+  --surface-2: #f6eef0;
+  --border: #ebdfe3;
+  --border-strong: #dcc9cf;
 
-  --text: #1a1620;
-  --muted: #625b6c;
-  --faint: #8e8799;
+  --text: #241419;
+  --muted: #6b555c;
+  --faint: #9a8188;
 
-  --accent: #c2543a;
+  --accent: #a83a58;
   --accent-ink: #ffffff;
 
   --ok: #17845a;
@@ -92,9 +99,9 @@
   --danger-soft: rgba(194, 65, 63, 0.08);
   --warn: #a4661f;
 
-  --shadow-sm: 0 1px 2px rgba(26, 22, 32, 0.06);
-  --shadow-md: 0 4px 16px -6px rgba(26, 22, 32, 0.14);
-  --shadow-lg: 0 14px 34px -10px rgba(26, 22, 32, 0.2);
+  --shadow-sm: 0 1px 2px rgba(60, 20, 32, 0.06);
+  --shadow-md: 0 4px 16px -6px rgba(60, 20, 32, 0.14);
+  --shadow-lg: 0 14px 34px -10px rgba(60, 20, 32, 0.2);
 }
 
 * { box-sizing: border-box; }
@@ -122,8 +129,10 @@ body::before {
   content: "";
   position: fixed;
   inset: 0 0 auto 0;
-  height: 320px;
-  background: radial-gradient(90% 100% at 50% 0%, var(--accent-soft), transparent 70%);
+  height: 420px;
+  background:
+    radial-gradient(120% 100% at 50% -10%, var(--accent-soft), transparent 62%),
+    radial-gradient(70% 60% at 85% 0%, color-mix(in srgb, var(--warn) 7%, transparent), transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -194,9 +203,10 @@ header {
 
 header h1 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0.005em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -284,9 +294,9 @@ header nav button:hover {
 
 .label {
   margin-bottom: 10px;
-  font-size: 10.5px;
-  font-weight: 650;
-  letter-spacing: 0.11em;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--faint);
 }
@@ -431,9 +441,10 @@ button.enlace:hover { color: var(--danger); }
 }
 
 .translation {
-  font-size: 20px;
-  line-height: 1.4;
-  letter-spacing: -0.015em;
+  font-family: var(--serif);
+  font-size: 21px;
+  line-height: 1.45;
+  letter-spacing: 0;
   overflow-wrap: anywhere;
 }
 
@@ -448,20 +459,23 @@ button.enlace:hover { color: var(--danger); }
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  animation: surgir 0.32s var(--ease) both;
-  transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease),
-    transform 0.18s var(--ease);
+  animation: surgir var(--lento) var(--ease) both;
+  transition: border-color var(--lento) var(--ease), box-shadow var(--lento) var(--ease),
+    transform var(--lento) var(--ease);
 }
 .reply::before {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
-  background: var(--accent);
-  opacity: 0.55;
+  background: linear-gradient(
+    to bottom,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 25%, transparent)
+  );
 }
-.reply:nth-child(2) { animation-delay: 0.05s; }
-.reply:nth-child(3) { animation-delay: 0.1s; }
+.reply:nth-child(2) { animation-delay: 0.07s; }
+.reply:nth-child(3) { animation-delay: 0.14s; }
 
 @keyframes surgir {
   from { opacity: 0; transform: translateY(8px); }

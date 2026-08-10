@@ -10,8 +10,9 @@
  */
 
 window.PALETAS = [
+  { nombre: "Rosa", oscuro: "#d4657f", oscuroInk: "#1a090f", claro: "#a83a58", claroInk: "#ffffff" },
+  { nombre: "Vino", oscuro: "#c1566b", oscuroInk: "#180810", claro: "#8e2f47", claroInk: "#ffffff" },
   { nombre: "Coral", oscuro: "#e4795e", oscuroInk: "#1a0f0c", claro: "#c2543a", claroInk: "#ffffff" },
-  { nombre: "Rosa", oscuro: "#ef7fa6", oscuroInk: "#22101a", claro: "#c0396b", claroInk: "#ffffff" },
   { nombre: "Ambar", oscuro: "#e3a851", oscuroInk: "#1e1508", claro: "#9a6410", claroInk: "#ffffff" },
   { nombre: "Verde", oscuro: "#6fc79a", oscuroInk: "#08201a", claro: "#17754f", claroInk: "#ffffff" },
   { nombre: "Azul", oscuro: "#7aa7f0", oscuroInk: "#0b142a", claro: "#2f5fb8", claroInk: "#ffffff" },
