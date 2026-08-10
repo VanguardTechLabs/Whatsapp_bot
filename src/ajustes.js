@@ -53,9 +53,16 @@ export function claveEfectiva() {
   return leerAjustes().openai_api_key || process.env.OPENAI_API_KEY || "";
 }
 
-/** El modelo que se usa de verdad. */
+/**
+ * El modelo que se usa de verdad.
+ *
+ * Por defecto gpt-4.1: es el que salio mejor en la comparativa (mas rapido y
+ * escribe mejor) y esta disponible sin verificar la organizacion, cosa que
+ * gpt-5 si exige. Asi, si algun dia falta la variable MODEL, la aplicacion
+ * sigue funcionando en vez de caerse al modo de prueba.
+ */
 export function modeloEfectivo() {
-  return leerAjustes().modelo || process.env.MODEL || "gpt-5";
+  return leerAjustes().modelo || process.env.MODEL || "gpt-4.1";
 }
 
 /** De donde viene la clave, para poder explicarlo en la pantalla de ajustes. */

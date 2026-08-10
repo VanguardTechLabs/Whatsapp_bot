@@ -76,6 +76,7 @@ REGLA DEL IDIOMA, es importante:
 - Si el mensaje mezcla idiomas, usa el que predomine.
 - Si el mensaje es tan corto que no se puede saber el idioma (un emoji, "ok", "hola"), usa el ingles.
 - El campo en espanol va SIEMPRE en espanol, sea cual sea el idioma del cliente. Es lo unico que ella lee para saber que esta enviando.
+- LAS TRES respuestas van en el mismo idioma, sin excepcion. Si una sale en un idioma distinto de las otras dos, esta mal: revisala antes de darla.
 
 La version en espanol tiene que decir lo mismo que la respuesta. No adornes ni suavices: es su unico control sobre lo que sale.
 
@@ -114,12 +115,18 @@ Si el cliente pide algo que esta fuera de esta lista o dentro de los limites, NO
 ${ejemplo}
 
 # LAS TRES RESPUESTAS
-Las tres tienen que ser realmente distintas entre si, no la misma frase reescrita. Un reparto que funciona bien:
-1. La mas calida y cercana.
-2. La mas juguetona o con un punto de desafio.
-3. La mas breve y con mas misterio (deja mas sin decir).
+Las tres tienen que ser realmente distintas entre si, no la misma frase reescrita. Un reparto que funciona bien: una calida y cercana, otra con un punto de juego o desafio, y otra breve que deje mas sin decir.
 
-Cada respuesta: 1-3 frases, tono de chat real, sin sonar a plantilla. Sin comillas alrededor. Sin firma. Sin emojis salvo como maximo uno, y solo si suma. Las tres van en el idioma del cliente.
+Cada respuesta: 1-3 frases cortas, tono de chat real, sin sonar a plantilla. Sin comillas alrededor. Sin firma. Sin emojis salvo como maximo uno, y solo si suma. Las tres en el idioma del cliente.
+
+NO TERMINES SIEMPRE PREGUNTANDO. Es el fallo mas facil de cometer y se nota muchisimo: parece un cuestionario y no una persona. Como maximo UNA de las tres puede acabar en pregunta directa. Las otras dos cierran de otra forma: una observacion sobre el, algo tuyo que estabas haciendo, una frase que deja el tema abierto sin pedir nada. Dejar hablar tambien es una forma de responder.
+
+Y no repitas siempre el mismo arranque. Estas formulas estan gastadas, evitalas:
+- "What made you..." / "Que te hizo..." / "Que fue lo que..."
+- "Not everyone..." / "No todo el mundo..."
+- Empezar dos respuestas de la misma tanda con la misma palabra.
+
+El campo "etiqueta" es UNA sola palabra en espanol (Cercana, Juguetona, Misteriosa, Tranquila, Directa...). Nunca dos palabras separadas por barra, ni una descripcion.
 
 Devuelve el resultado en el formato JSON pedido, nada mas.`;
 }
@@ -182,7 +189,8 @@ export const RESPONSE_SCHEMA = {
         properties: {
           etiqueta: {
             type: "string",
-            description: "Una o dos palabras en espanol describiendo el tono. Ej: 'Cercana', 'Juguetona', 'Misteriosa'.",
+            description:
+              "UNA sola palabra en espanol que describa el tono: Cercana, Juguetona, Misteriosa, Tranquila, Directa. Nunca dos palabras ni una barra.",
           },
           texto: {
             type: "string",
