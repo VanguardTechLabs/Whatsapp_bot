@@ -891,3 +891,158 @@ kbd {
     scroll-behavior: auto !important;
   }
 }
+
+/* ==========================================================================
+   Pantalla principal: dos estados en vez de una pagina larga.
+
+   La usuaria hace siempre lo mismo: pega, lee, elige, copia y se va. Con una
+   sola columna que crecia hacia abajo, las tres respuestas — que son lo unico
+   que importa — quedaban fuera de pantalla en el movil. Ahora la app ocupa el
+   alto entero: primero se escribe, despues se ven las respuestas, y los
+   botones viven abajo, donde llega el pulgar.
+   ========================================================================== */
+
+body.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body.app header {
+  margin: 0;
+  flex: none;
+}
+
+.vista {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px 8px;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.rotulo {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* El campo de pegar ocupa lo que le sobre: es lo unico que se hace ahi. */
+.entrada-grande {
+  min-height: 34vh;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------- opciones */
+
+.opciones {
+  margin-top: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.opciones > summary {
+  padding: 13px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.opciones > summary::-webkit-details-marker { display: none; }
+.opciones > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--lento) var(--ease);
+}
+.opciones[open] > summary::before { transform: rotate(45deg); }
+.opciones > summary:hover { color: var(--text); }
+
+.opcion {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+}
+.opcion-nombre {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.marca-check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14.5px;
+  cursor: pointer;
+}
+.marca-check input { width: auto; margin: 0; }
+
+/* --------------------------------------------------------- lo que ha dicho */
+
+.dijo {
+  padding-bottom: 16px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dijo .original {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+}
+
+.motivo {
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+/* ------------------------------------------------------------------ barra */
+
+.barra {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(160%) blur(12px);
+  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  border-top: 1px solid var(--border);
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.acciones {
+  display: flex;
+  gap: 9px;
+}
+.acciones button { flex: 1; }
+
+/* La tarjeta entera copia: en el movil no hay que apuntar a un boton. */
+.reply { cursor: pointer; }
+.reply:active { transform: scale(0.995); }
+
+@media (max-width: 480px) {
+  .vista { padding: 14px 14px 6px; }
+  .entrada-grande { min-height: 30vh; }
+}

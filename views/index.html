@@ -17,18 +17,24 @@
   <meta name="apple-mobile-web-app-title" content="Asistente">
   <script src="/tema.js"></script>
 </head>
-<body>
-<div class="wrap">
+<body class="app">
 
-  <header>
-    <div class="marca"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7.04" fill="var(--accent)"/><rect x="7" y="9" width="14" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="7" y="14.6" width="10" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="14" y="20.2" width="11" height="3.4" rx="1.7" fill="var(--accent-ink)"/></svg><h1>Asistente de respuestas</h1></div>
-    <nav>
-      <a href="/estilo">Estilo</a>
-      <a href="/instrucciones">Instrucciones</a>
-      <a href="/ajustes">Ajustes</a>
-      <button id="salir" type="button">Salir</button>
-    </nav>
-  </header>
+<header>
+  <div class="marca">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7.04" fill="var(--accent)"/><rect x="7" y="9" width="14" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="7" y="14.6" width="10" height="3.4" rx="1.7" fill="var(--accent-ink)"/><rect x="14" y="20.2" width="11" height="3.4" rx="1.7" fill="var(--accent-ink)"/></svg>
+    <h1>Asistente</h1>
+  </div>
+  <nav>
+    <a href="/estilo">Estilo</a>
+    <a href="/instrucciones">Ayuda</a>
+    <a href="/ajustes">Ajustes</a>
+    <button id="salir" type="button">Salir</button>
+  </nav>
+</header>
+
+<!-- ============================================================ ESCRIBIR -->
+
+<main id="vista-entrada" class="vista">
 
   <div class="status">
     <span id="dot" class="dot"></span>
@@ -37,7 +43,6 @@
 
   <div id="error" class="error hidden"></div>
 
-  <!-- aviso grande cuando las respuestas NO las escribe la IA -->
   <div id="banner-demo" class="demo-banner hidden">
     <div class="demo-title">Modo de prueba — estas respuestas no las escribe la IA</div>
     <p id="demo-motivo"></p>
@@ -45,25 +50,26 @@
     <a href="/ajustes">Arreglar la clave en Ajustes</a>
   </div>
 
-  <!-- con quien hablas -->
-  <div class="card">
-    <div class="label">Con quien hablas</div>
-    <div class="row">
-      <select id="cliente" style="flex:1 1 200px">
-        <option value="">Sin cliente (no recuerda nada)</option>
-      </select>
-      <button id="nuevo-cliente" class="secundario" type="button">+ Nuevo</button>
+  <label class="rotulo" for="mensaje">Que te ha escrito</label>
+  <textarea id="mensaje" class="entrada-grande"
+            placeholder="Pega aqui su mensaje."></textarea>
+
+  <details class="opciones">
+    <summary>Opciones</summary>
+
+    <div class="opcion">
+      <span class="opcion-nombre">Con quien hablas</span>
+      <div class="row">
+        <select id="cliente" style="flex:1 1 180px">
+          <option value="">Sin cliente</option>
+        </select>
+        <button id="nuevo-cliente" class="secundario" type="button">+ Nuevo</button>
+      </div>
+      <div id="ficha-cliente" class="ficha hidden"></div>
     </div>
-    <div id="ficha-cliente" class="ficha hidden"></div>
-  </div>
 
-  <!-- entrada -->
-  <div class="card">
-    <div class="label">Mensaje del cliente</div>
-    <textarea id="mensaje" placeholder="Pega aqui el mensaje del cliente (o cambia de pestana y se pega solo)."></textarea>
-
-    <div class="row" style="margin:12px 0">
-      <label for="situacion" style="font-size:13px;color:var(--muted)">Situacion</label>
+    <div class="opcion">
+      <span class="opcion-nombre">Situacion</span>
       <select id="situacion">
         <option value="">Detectar sola</option>
         <option value="saludo">Solo dice hola</option>
@@ -74,42 +80,54 @@
         <option value="recuperar">Ya compro, hay que recuperarlo</option>
         <option value="mirando">Habla mucho pero no compra</option>
       </select>
-      <label style="font-size:13px;color:var(--muted);margin-left:auto">
-        <input type="checkbox" id="auto" checked> Pegado automatico
-      </label>
     </div>
 
-    <!-- el asistente nunca dice precios; solo si ella escribe uno aqui -->
-    <div style="margin:0 0 12px">
-      <label style="font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:7px">
-        <input type="checkbox" id="usar-precio"> Quiero decir el precio en esta respuesta
+    <div class="opcion">
+      <label class="marca-check">
+        <input type="checkbox" id="usar-precio">
+        <span>Decir el precio en esta respuesta</span>
       </label>
       <input id="precio" class="hidden" type="text" inputmode="decimal"
-             placeholder="Por ejemplo: 25 dolares" style="margin-top:9px" autocomplete="off">
+             placeholder="Por ejemplo: 25 dolares" autocomplete="off">
     </div>
 
-    <button id="generar" class="primary" type="button">Pegar y generar respuestas</button>
-    <button id="otra" class="secundario hidden" type="button" style="width:100%;margin-top:9px">
-      Generar otras respuestas distintas
-    </button>
-  </div>
+    <div class="opcion">
+      <label class="marca-check">
+        <input type="checkbox" id="auto" checked>
+        <span>Pegado automatico</span>
+      </label>
+    </div>
+  </details>
 
-  <!-- traduccion -->
-  <div id="bloque-traduccion" class="card hidden">
-    <div class="label">Lo que dice el cliente</div>
-    <div id="original" class="original"></div>
+</main>
+
+<!-- ========================================================== RESPUESTAS -->
+
+<main id="vista-resultado" class="vista hidden">
+
+  <div class="dijo">
     <div id="traduccion" class="translation"></div>
-    <div class="row" style="margin-top:12px">
+    <div id="original" class="original"></div>
+    <div class="row" style="margin-top:10px">
       <span id="chip-situacion" class="chip"></span>
       <span id="chip-idioma" class="chip"></span>
-      <span id="motivo" style="font-size:13px;color:var(--muted)"></span>
     </div>
+    <div id="motivo" class="motivo"></div>
   </div>
 
-  <!-- respuestas -->
   <div id="respuestas"></div>
   <div id="meta" class="meta"></div>
 
+</main>
+
+<!-- ============================================================== BARRA -->
+
+<div class="barra">
+  <button id="generar" class="primary" type="button">Pegar y generar</button>
+  <div id="acciones-resultado" class="acciones hidden">
+    <button id="volver" class="secundario" type="button">Otro mensaje</button>
+    <button id="otra" class="secundario" type="button">Otras respuestas</button>
+  </div>
 </div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

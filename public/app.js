@@ -8,7 +8,6 @@ const el = {
   estado: $("estado"),
   dot: $("dot"),
   error: $("error"),
-  bloqueTraduccion: $("bloque-traduccion"),
   original: $("original"),
   traduccion: $("traduccion"),
   chip: $("chip-situacion"),
@@ -26,7 +25,33 @@ const el = {
   otra: $("otra"),
   usarPrecio: $("usar-precio"),
   precio: $("precio"),
+  vistaEntrada: $("vista-entrada"),
+  vistaResultado: $("vista-resultado"),
+  accionesResultado: $("acciones-resultado"),
+  volver: $("volver"),
 };
+
+/* ------------------------------------------------------------------ vistas */
+
+/**
+ * Dos estados en vez de una pagina larga: o estas escribiendo, o estas
+ * eligiendo. Asi las tres respuestas caben en pantalla sin tener que bajar.
+ */
+function verEntrada() {
+  el.vistaEntrada.classList.remove("hidden");
+  el.vistaResultado.classList.add("hidden");
+  el.generar.classList.remove("hidden");
+  el.accionesResultado.classList.add("hidden");
+  el.vistaEntrada.scrollTop = 0;
+}
+
+function verResultado() {
+  el.vistaEntrada.classList.add("hidden");
+  el.vistaResultado.classList.remove("hidden");
+  el.generar.classList.add("hidden");
+  el.accionesResultado.classList.remove("hidden");
+  el.vistaResultado.scrollTop = 0;
+}
 
 const ETIQUETAS = {
   saludo: "Solo dice hola",
@@ -220,11 +245,11 @@ function prepararResultado(original) {
   el.chip.textContent = "";
   el.chipIdioma.textContent = "";
   el.motivo.textContent = "";
-  el.bloqueTraduccion.classList.remove("hidden");
   el.bannerDemo.classList.add("hidden");
   el.meta.textContent = "";
   respuestasActuales = [];
   mostrarEsqueleto();
+  verResultado();
 }
 
 function mostrarTraduccion(texto) {
@@ -273,6 +298,10 @@ function mostrarRespuesta(i, r) {
   const es = document.createElement("div");
   es.className = "es";
   es.textContent = r.espanol || "";
+
+  card.addEventListener("click", (ev) => {
+    if (!ev.target.closest("button")) copiar(i);
+  });
 
   card.append(top, en, es);
 
@@ -340,7 +369,6 @@ async function generar() {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       el.respuestas.replaceChildren();
-      el.bloqueTraduccion.classList.add("hidden");
       if (data.falta_clave) {
         el.error.replaceChildren(
           document.createTextNode(data.error + " "),
@@ -388,10 +416,10 @@ async function generar() {
 
     if (fallo) throw new Error(fallo);
 
-    el.otra.classList.remove("hidden");
     if (el.cliente.value) pintarFicha();
   } catch (e) {
     el.respuestas.replaceChildren();
+    verEntrada();
     error(e.message);
     estado("Ha fallado. Reintenta.", "off");
   } finally {
@@ -481,6 +509,12 @@ document.addEventListener("keydown", (e) => {
 
 el.otra.addEventListener("click", () => generar());
 
+el.volver.addEventListener("click", () => {
+  verEntrada();
+  el.mensaje.focus();
+  el.mensaje.select();
+});
+
 el.cliente.addEventListener("change", pintarFicha);
 
 el.nuevoCliente.addEventListener("click", async () => {
@@ -493,7 +527,8 @@ el.nuevoCliente.addEventListener("click", async () => {
   });
   if (!r.ok) return error("No se ha podido crear.");
   const c = await r.json();
-  await cargarClientes();
+  await verEntrada();
+cargarClientes();
   el.cliente.value = c.id;
   await pintarFicha();
   toast("Cliente creado");
