@@ -184,6 +184,7 @@ app.get("/api/persona", requireAuth, (req, res) => {
     reglas_de_oro: p.reglas_de_oro,
     prohibido_decir: p.prohibido_decir,
     situaciones: p.situaciones,
+    sensualidad: p.sensualidad ?? null,
     ofertas: p.ofertas,
     limites: p.limites,
     ejemplo_de_conversacion: p.ejemplo_de_conversacion,
@@ -208,6 +209,17 @@ app.put("/api/persona", requireAuth, (req, res) => {
   if (typeof b.reglas_de_oro === "string") parcial.reglas_de_oro = lineas(b.reglas_de_oro);
   if (typeof b.prohibido_decir === "string") parcial.prohibido_decir = lineas(b.prohibido_decir);
   if (typeof b.limites === "string") parcial.limites = lineas(b.limites);
+
+  // Sensualidad: solo se dejan tocar las dos listas que cambian el tono.
+  // La idea y los limites de estilo se quedan como estan.
+  if (typeof b.sensual_como === "string" || typeof b.sensual_escalado === "string") {
+    const actual = loadPersona({ reload: true }).sensualidad ?? {};
+    parcial.sensualidad = {
+      ...actual,
+      ...(typeof b.sensual_como === "string" ? { como_se_nota: lineas(b.sensual_como) } : {}),
+      ...(typeof b.sensual_escalado === "string" ? { escalado: lineas(b.sensual_escalado) } : {}),
+    };
+  }
 
   // "nombre del pack | para quien"  (sin precio: el asistente nunca lo dice)
   if (typeof b.ofertas === "string") {

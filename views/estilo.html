@@ -55,6 +55,23 @@
   </div>
 
   <div class="card">
+    <div class="label">Como insinuas</div>
+    <p class="ayuda">
+      De donde sale tu lado sensual. Escenas y detalles, no descripciones.
+      Esto es lo que mas cambia el tono de las respuestas.
+    </p>
+    <textarea id="sensual_como" rows="8"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="label">Hasta donde llegas, y en que orden</div>
+    <p class="ayuda">
+      El ritmo. Que va primero y que no se salta aunque te lo pidan.
+    </p>
+    <textarea id="sensual_escalado" rows="6"></textarea>
+  </div>
+
+  <div class="card">
     <div class="label">Limites: lo que NO ofreces</div>
     <p class="ayuda">
       Lo que no haces. El asistente no lo prometera jamas, aunque se lo pidan.
@@ -151,6 +168,8 @@
     $("reglas_de_oro").value = (p.reglas_de_oro || []).join("\n");
     $("prohibido_decir").value = (p.prohibido_decir || []).join("\n");
     $("limites").value = (p.limites || []).join("\n");
+    $("sensual_como").value = (p.sensualidad?.como_se_nota || []).join("\n");
+    $("sensual_escalado").value = (p.sensualidad?.escalado || []).join("\n");
     $("ofertas").value = (p.ofertas || [])
       .map((o) => [o.nombre, o.para_quien].filter(Boolean).join(" | "))
       .join("\n");
@@ -182,6 +201,8 @@
           reglas_de_oro: $("reglas_de_oro").value,
           prohibido_decir: $("prohibido_decir").value,
           limites: $("limites").value,
+          sensual_como: $("sensual_como").value,
+          sensual_escalado: $("sensual_escalado").value,
           ofertas: $("ofertas").value,
           situaciones: sit,
         }),

@@ -62,6 +62,23 @@ export function buildSystemPrompt(persona) {
   // no puede decirlos por accidente.
   const ofertas = p.ofertas.map((o) => `- ${o.nombre} -> ${o.para_quien}`).join("\n");
 
+  // Como se insinua sin caer en lo explicito. Es lo que hace que suene a ella
+  // y no a un chat cualquiera, asi que va en su propio apartado.
+  const s = p.sensualidad;
+  const sensualidad = !s
+    ? ""
+    : `# SENSUALIDAD: DE DONDE SALE
+${s.idea}
+
+Como se nota:
+${s.como_se_nota.map((x) => `- ${x}`).join("\n")}
+
+El orden importa, y no se salta:
+${s.escalado.map((x) => `- ${x}`).join("\n")}
+
+Donde esta el limite:
+${s.limites_de_estilo.map((x) => `- ${x}`).join("\n")}`;
+
   return `Eres el asistente de escritura privado de ${p.nombre}, una creadora de contenido. NO hablas con el cliente: le propones a ${p.nombre} tres formas de responder, y ella elige y envia. Escribes SIEMPRE como si fueras ella, en primera persona.
 
 ${p.nombre} solo entiende ESPANOL. Sus clientes casi siempre escriben en INGLES, pero a veces llega alguno en otro idioma. Por eso, en cada mensaje tienes tres trabajos:
@@ -88,6 +105,8 @@ ${p.reglas_de_oro.map((x) => `- ${x}`).join("\n")}
 
 # NUNCA ESCRIBAS ESTO
 ${p.prohibido_decir.map((x) => `- ${x}`).join("\n")}
+
+${sensualidad}
 
 # GANCHOS Y TEMAS DE LOS QUE TIRAR
 ${ganchos}
