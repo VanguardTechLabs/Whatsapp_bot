@@ -179,8 +179,21 @@ async function pintarFicha() {
 
 /* ---------------------------------------------------------- portapapeles */
 
-const puedeLeerPortapapeles = () =>
+/** El navegador ofrece leer el portapapeles (hace falta https). */
+const hayApiPortapapeles = () =>
   window.isSecureContext && navigator.clipboard && typeof navigator.clipboard.readText === "function";
+
+/**
+ * En el movil el portapapeles solo se puede leer justo despues de un toque,
+ * nunca al volver a la aplicacion. Asi que ahi el pegado automatico no existe
+ * por mucho que la funcion este disponible: se pega con el boton.
+ */
+const esTactil = window.matchMedia("(hover: none)").matches;
+
+const puedeLeerPortapapeles = () => hayApiPortapapeles() && !esTactil;
+
+/** Texto del boton en reposo: en el movil no se habla de pestanas. */
+const TEXTO_BOTON = esTactil ? "Pegar mensaje y generar" : "Pegar y generar respuestas";
 
 async function intentarPegadoAutomatico() {
   if (!el.auto.checked || generando || !puedeLeerPortapapeles() || !document.hasFocus()) return;
@@ -384,7 +397,7 @@ async function generar() {
   } finally {
     generando = false;
     el.generar.disabled = false;
-    el.generar.textContent = "Pegar y generar respuestas";
+    el.generar.textContent = TEXTO_BOTON;
   }
 }
 
@@ -432,8 +445,9 @@ async function copiar(indice) {
 /* --------------------------------------------------------------- eventos */
 
 el.generar.addEventListener("click", async () => {
-  // si el campo esta vacio, intentamos leer el portapapeles primero
-  if (!el.mensaje.value.trim() && puedeLeerPortapapeles()) {
+  // Si el campo esta vacio se intenta leer el portapapeles. Aqui si vale en el
+  // movil, porque venimos de un toque: iOS pedira confirmar con "Pegar".
+  if (!el.mensaje.value.trim() && hayApiPortapapeles()) {
     try {
       el.mensaje.value = (await navigator.clipboard.readText()).trim();
     } catch { /* sin permiso: el usuario pega a mano */ }
@@ -532,7 +546,14 @@ cargarClientes();
 if (puedeLeerPortapapeles()) {
   estado("Pegado automatico activo: copia el mensaje y vuelve a esta pestana.", "on");
 } else {
+  // Movil (o navegador sin permiso): el pegado automatico no aplica.
   el.auto.checked = false;
   el.auto.disabled = true;
-  estado("Pega el mensaje y pulsa el boton.");
+  el.auto.closest("label").classList.add("hidden");
+  el.generar.textContent = TEXTO_BOTON;
+  estado(
+    esTactil
+      ? "Copia el mensaje del cliente y pulsa el boton."
+      : "Pega el mensaje y pulsa el boton.",
+  );
 }
