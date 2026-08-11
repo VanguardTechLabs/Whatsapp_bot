@@ -119,7 +119,11 @@
         "Situaciones que reconoce",
         Object.values(p.situaciones).map((s) => s.etiqueta + " — " + s.objetivo)
       );
-      seccion("Que puede ofrecer", p.ofertas.map((o) => o.nombre + " (" + o.precio + ") — " + o.para_quien));
+      // Sin precio: el asistente no los conoce, para no poder decirlos.
+      seccion(
+        "Que puede ofrecer",
+        p.ofertas.map((o) => [o.nombre, o.para_quien].filter(Boolean).join(" — "))
+      );
       seccion("Limites: cosas que nunca promete", p.limites);
 
       for (const turno of p.ejemplo_de_conversacion) {
