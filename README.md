@@ -244,6 +244,8 @@ despliegue nuevo nunca pisa lo que ella haya cambiado.
 > No montes el volumen en `/app/config`: taparía la plantilla del repositorio y
 > el primer arranque se quedaría sin estilo.
 
+> Persistencia con volumen verificada en produccion.
+
 ## 7. Despliegue
 
 Necesita **HTTPS** para que funcione el pegado automático del portapapeles
