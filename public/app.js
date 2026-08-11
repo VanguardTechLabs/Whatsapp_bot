@@ -25,32 +25,25 @@ const el = {
   otra: $("otra"),
   usarPrecio: $("usar-precio"),
   precio: $("precio"),
-  vistaEntrada: $("vista-entrada"),
-  vistaResultado: $("vista-resultado"),
-  accionesResultado: $("acciones-resultado"),
-  volver: $("volver"),
+  resultado: $("resultado"),
 };
 
 /* ------------------------------------------------------------------ vistas */
 
 /**
- * Dos estados en vez de una pagina larga: o estas escribiendo, o estas
- * eligiendo. Asi las tres respuestas caben en pantalla sin tener que bajar.
+ * Una sola pantalla: el recuadro para pegar no se esconde nunca. Antes habia
+ * dos estados y al ver las respuestas desaparecia el campo, asi que no habia
+ * forma evidente de escribir el siguiente mensaje.
  */
-function verEntrada() {
-  el.vistaEntrada.classList.remove("hidden");
-  el.vistaResultado.classList.add("hidden");
-  el.generar.classList.remove("hidden");
-  el.accionesResultado.classList.add("hidden");
-  el.vistaEntrada.scrollTop = 0;
+function verResultado() {
+  el.resultado.classList.remove("hidden");
+  el.otra.classList.remove("hidden");
+  el.resultado.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function verResultado() {
-  el.vistaEntrada.classList.add("hidden");
-  el.vistaResultado.classList.remove("hidden");
-  el.generar.classList.add("hidden");
-  el.accionesResultado.classList.remove("hidden");
-  el.vistaResultado.scrollTop = 0;
+function ocultarResultado() {
+  el.resultado.classList.add("hidden");
+  el.otra.classList.add("hidden");
 }
 
 const ETIQUETAS = {
@@ -419,7 +412,7 @@ async function generar() {
     if (el.cliente.value) pintarFicha();
   } catch (e) {
     el.respuestas.replaceChildren();
-    verEntrada();
+    ocultarResultado();
     error(e.message);
     estado("Ha fallado. Reintenta.", "off");
   } finally {
@@ -509,12 +502,6 @@ document.addEventListener("keydown", (e) => {
 
 el.otra.addEventListener("click", () => generar());
 
-el.volver.addEventListener("click", () => {
-  verEntrada();
-  el.mensaje.focus();
-  el.mensaje.select();
-});
-
 el.cliente.addEventListener("change", pintarFicha);
 
 el.nuevoCliente.addEventListener("click", async () => {
@@ -527,8 +514,7 @@ el.nuevoCliente.addEventListener("click", async () => {
   });
   if (!r.ok) return error("No se ha podido crear.");
   const c = await r.json();
-  await verEntrada();
-cargarClientes();
+  await cargarClientes();
   el.cliente.value = c.id;
   await pintarFicha();
   toast("Cliente creado");

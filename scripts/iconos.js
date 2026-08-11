@@ -7,8 +7,8 @@
  *
  *   node scripts/iconos.js [colorFondo] [colorBarras]
  *
- * El dibujo: dos cuadrados desplazados, uno sobre otro. Uno es lo que escribe
- * el cliente y el otro lo que ella envia. Esquinas vivas, sin redondear.
+ * El dibujo: dos circulos en diagonal sobre un cuadrado redondeado. Uno es lo
+ * que escribe el cliente y el otro lo que ella envia.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -18,8 +18,8 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const salida = path.join(here, "..", "public");
 
-const FONDO = hexARgb(process.argv[2] || "#c9a227");
-const BARRA = hexARgb(process.argv[3] || "#16150f");
+const FONDO = hexARgb(process.argv[2] || "#ff6f7d");
+const BARRA = hexARgb(process.argv[3] || "#1a0710");
 
 function hexARgb(hex) {
   const h = hex.replace("#", "");
@@ -42,15 +42,15 @@ function distRect(px, py, cx, cy, mediaAncho, mediaAlto, r) {
 
 /** Proporciones del dibujo, en tanto por uno del lado. */
 const BARRAS = [
-  { x: 0.16, y: 0.16, w: 0.34, h: 0.34 },
-  { x: 0.50, y: 0.50, w: 0.34, h: 0.34 },
+  { x: 0.235, y: 0.265, w: 0.29, h: 0.29, redondo: true },
+  { x: 0.50,  y: 0.47,  w: 0.29, h: 0.29, redondo: true },
 ];
 
 /** Devuelve un buffer RGBA de lado x lado, con antialiasing por supermuestreo. */
 function pintar(lado) {
   const buf = Buffer.alloc(lado * lado * 4);
   const M = 4; // 4x4 muestras por pixel
-  const rFondo = lado * 0.02; // esquinas vivas, no pastilla
+  const rFondo = lado * 0.28; // esquina generosa, tipo icono de app
 
   for (let y = 0; y < lado; y++) {
     for (let x = 0; x < lado; x++) {
@@ -68,7 +68,7 @@ function pintar(lado) {
           for (const b of BARRAS) {
             const bx = b.x * lado, by = b.y * lado;
             const bw = b.w * lado, bh = b.h * lado;
-            const r = 0; // cuadrados, no pastillas
+            const r = b.redondo ? bh / 2 : 0;
             if (distRect(px, py, bx + bw / 2, by + bh / 2, bw / 2, bh / 2, r) < 0) {
               dentroBarra++;
               break;
@@ -205,16 +205,22 @@ function ico(lados) {
 /* ---------------------------------------------------------------- SVG --- */
 
 function svg() {
-  const barras = BARRAS.map(
-    (b) =>
-      `  <rect x="${(b.x * 32).toFixed(2)}" y="${(b.y * 32).toFixed(2)}" ` +
-      `width="${(b.w * 32).toFixed(2)}" height="${(b.h * 32).toFixed(2)}" ` +
-      `fill="${process.argv[3] || "#16150f"}"/>`
-  ).join("\n");
+  const tinta = process.argv[3] || "#1a0710";
+  const circulos = BARRAS.map((b, n) => {
+    const r = (b.w * 32) / 2;
+    const cx = (b.x * 32 + r).toFixed(2);
+    const cy = (b.y * 32 + r).toFixed(2);
+    const opacidad = n === 0 ? "" : ' opacity=".55"';
+    return `  <circle cx="${cx}" cy="${cy}" r="${r.toFixed(2)}" fill="${tinta}"${opacidad}/>`;
+  }).join("\n");
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" fill="${process.argv[2] || "#c9a227"}"/>
-${barras}
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="${process.argv[2] || "#ff5f8f"}"/>
+    <stop offset="1" stop-color="${process.argv[4] || "#ff9e5e"}"/>
+  </linearGradient></defs>
+  <rect width="32" height="32" rx="9" fill="url(#g)"/>
+${circulos}
 </svg>
 `;
 }

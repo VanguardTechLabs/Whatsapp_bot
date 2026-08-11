@@ -1,5 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" fill="#c9a227"/>
-  <rect x="5.12" y="5.12" width="10.88" height="10.88" fill="#16150f"/>
-  <rect x="16.00" y="16.00" width="10.88" height="10.88" fill="#16150f"/>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#ff5f8f"/>
+    <stop offset="1" stop-color="#ff9e5e"/>
+  </linearGradient></defs>
+  <rect width="32" height="32" rx="9" fill="url(#g)"/>
+  <circle cx="12.16" cy="13.12" r="4.64" fill="#1a0710"/>
+  <circle cx="20.64" cy="19.68" r="4.64" fill="#1a0710" opacity=".55"/>
 </svg>

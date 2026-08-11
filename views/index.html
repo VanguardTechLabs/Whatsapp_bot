@@ -8,8 +8,8 @@
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="icon" href="/icono.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icono-180.png">
-  <meta name="theme-color" content="#141311" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#f0f1ed" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d080f" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#faf6f8" media="(prefers-color-scheme: light)">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,7 +21,7 @@
 
 <header>
   <div class="marca">
-    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="var(--accent)"/><rect x="5.12" y="5.12" width="10.88" height="10.88" fill="var(--accent-ink)"/><rect x="16" y="16" width="10.88" height="10.88" fill="var(--accent-ink)"/></svg>
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--a1)"/><stop offset="1" stop-color="var(--a2)"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#g)"/><circle cx="12" cy="13" r="4.6" fill="var(--accent-ink)"/><circle cx="20.5" cy="19.5" r="4.6" fill="var(--accent-ink)" opacity=".55"/></svg>
     <h1>Asistente</h1>
   </div>
   <nav>
@@ -32,9 +32,7 @@
   </nav>
 </header>
 
-<!-- ============================================================ ESCRIBIR -->
-
-<main id="vista-entrada" class="vista">
+<main class="vista">
 
   <div class="status">
     <span id="dot" class="dot"></span>
@@ -50,84 +48,78 @@
     <a href="/ajustes">Arreglar la clave en Ajustes</a>
   </div>
 
-  <label class="rotulo" for="mensaje">Que te ha escrito</label>
-  <textarea id="mensaje" class="entrada-grande"
-            placeholder="Pega aqui su mensaje."></textarea>
+  <!-- el recuadro para pegar no se va nunca -->
+  <section class="bloque-entrada">
+    <label class="rotulo" for="mensaje">Que te ha escrito</label>
+    <textarea id="mensaje" placeholder="Pega aqui su mensaje."></textarea>
 
-  <details class="opciones">
-    <summary>Opciones</summary>
+    <details class="opciones">
+      <summary>Opciones</summary>
 
-    <div class="opcion">
-      <span class="opcion-nombre">Con quien hablas</span>
-      <div class="row">
-        <select id="cliente" style="flex:1 1 180px">
-          <option value="">Sin cliente</option>
-        </select>
-        <button id="nuevo-cliente" class="secundario" type="button">+ Nuevo</button>
+      <div class="opcion">
+        <span class="opcion-nombre">Con quien hablas</span>
+        <div class="row">
+          <select id="cliente" style="flex:1 1 180px">
+            <option value="">Sin cliente</option>
+          </select>
+          <button id="nuevo-cliente" class="secundario chico" type="button">+ Nuevo</button>
+        </div>
+        <div id="ficha-cliente" class="ficha hidden"></div>
       </div>
-      <div id="ficha-cliente" class="ficha hidden"></div>
+
+      <div class="opcion">
+        <span class="opcion-nombre">Situacion</span>
+        <select id="situacion">
+          <option value="">Detectar sola</option>
+          <option value="saludo">Solo dice hola</option>
+          <option value="elogio">Manda un elogio</option>
+          <option value="emoji">Manda un emoji</option>
+          <option value="conversador">Conversa bastante</option>
+          <option value="ausente">Lleva tiempo sin escribir</option>
+          <option value="recuperar">Ya compro, hay que recuperarlo</option>
+          <option value="mirando">Habla mucho pero no compra</option>
+        </select>
+      </div>
+
+      <div class="opcion">
+        <label class="marca-check">
+          <input type="checkbox" id="usar-precio">
+          <span>Decir el precio en esta respuesta</span>
+        </label>
+        <input id="precio" class="hidden" type="text" inputmode="decimal"
+               placeholder="Por ejemplo: 25 dolares" autocomplete="off">
+      </div>
+
+      <div class="opcion">
+        <label class="marca-check">
+          <input type="checkbox" id="auto" checked>
+          <span>Pegado automatico</span>
+        </label>
+      </div>
+    </details>
+  </section>
+
+  <!-- resultados -->
+  <section id="resultado" class="hidden">
+    <div class="dijo">
+      <div id="traduccion" class="translation"></div>
+      <div id="original" class="original"></div>
+      <div class="row" style="margin-top:12px">
+        <span id="chip-situacion" class="chip"></span>
+        <span id="chip-idioma" class="chip"></span>
+      </div>
+      <div id="motivo" class="motivo"></div>
     </div>
 
-    <div class="opcion">
-      <span class="opcion-nombre">Situacion</span>
-      <select id="situacion">
-        <option value="">Detectar sola</option>
-        <option value="saludo">Solo dice hola</option>
-        <option value="elogio">Manda un elogio</option>
-        <option value="emoji">Manda un emoji</option>
-        <option value="conversador">Conversa bastante</option>
-        <option value="ausente">Lleva tiempo sin escribir</option>
-        <option value="recuperar">Ya compro, hay que recuperarlo</option>
-        <option value="mirando">Habla mucho pero no compra</option>
-      </select>
-    </div>
-
-    <div class="opcion">
-      <label class="marca-check">
-        <input type="checkbox" id="usar-precio">
-        <span>Decir el precio en esta respuesta</span>
-      </label>
-      <input id="precio" class="hidden" type="text" inputmode="decimal"
-             placeholder="Por ejemplo: 25 dolares" autocomplete="off">
-    </div>
-
-    <div class="opcion">
-      <label class="marca-check">
-        <input type="checkbox" id="auto" checked>
-        <span>Pegado automatico</span>
-      </label>
-    </div>
-  </details>
+    <div id="respuestas"></div>
+    <div id="meta" class="meta"></div>
+  </section>
 
 </main>
-
-<!-- ========================================================== RESPUESTAS -->
-
-<main id="vista-resultado" class="vista hidden">
-
-  <div class="dijo">
-    <div id="traduccion" class="translation"></div>
-    <div id="original" class="original"></div>
-    <div class="row" style="margin-top:10px">
-      <span id="chip-situacion" class="chip"></span>
-      <span id="chip-idioma" class="chip"></span>
-    </div>
-    <div id="motivo" class="motivo"></div>
-  </div>
-
-  <div id="respuestas"></div>
-  <div id="meta" class="meta"></div>
-
-</main>
-
-<!-- ============================================================== BARRA -->
 
 <div class="barra">
   <button id="generar" class="primary" type="button">Pegar y generar</button>
-  <div id="acciones-resultado" class="acciones hidden">
-    <button id="volver" class="secundario" type="button">Otro mensaje</button>
-    <button id="otra" class="secundario" type="button">Otras respuestas</button>
-  </div>
+  <button id="otra" class="secundario hidden" type="button">Otras respuestas</button>
 </div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
