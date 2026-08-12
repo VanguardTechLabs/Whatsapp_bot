@@ -117,7 +117,11 @@ app.post("/api/login", frenarLogin, (req, res) => {
   }
 
   const { usuario, clave } = req.body ?? {};
-  const okUser = typeof usuario === "string" && usuario.trim() === APP_USER;
+  // Sin distinguir mayusculas: el teclado del iPhone pone la primera en
+  // mayuscula el solo, y "Maiko" no debe fallar. Lo que protege es la clave.
+  const okUser =
+    typeof usuario === "string" &&
+    usuario.trim().toLowerCase() === APP_USER.trim().toLowerCase();
   const okPass = verificarPassword(clave);
 
   if (!okUser || !okPass) {
