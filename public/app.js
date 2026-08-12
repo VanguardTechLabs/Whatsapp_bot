@@ -80,6 +80,7 @@ const ETIQUETAS = {
   ausente: "Lleva tiempo sin escribir",
   recuperar: "Ya compro, hay que recuperarlo",
   mirando: "Habla mucho pero no compra",
+  concreto: "Pregunta algo concreto",
 };
 
 // El asistente responde en el mismo idioma en que escribio el cliente.

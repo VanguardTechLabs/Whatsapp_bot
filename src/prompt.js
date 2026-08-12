@@ -35,6 +35,7 @@ export const SITUATIONS = [
   "ausente",
   "recuperar",
   "mirando",
+  "concreto",
 ];
 
 /**
