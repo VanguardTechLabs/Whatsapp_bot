@@ -66,11 +66,11 @@ function esProblemaDeConfiguracion(err) {
   return false;
 }
 
-export async function generarRespuestas({ mensaje, situacion = null, notas = "", precio = "", clienteId = "" }) {
+export async function generarRespuestas({ mensaje, situacion = null, notas = "", precio = "", clienteId = "", modo = "responder", idioma = "en" }) {
   if (MODO_SIMULADO) return generarSimulado({ mensaje, situacion });
 
   try {
-    return await generarConAPI({ mensaje, situacion, notas, precio, clienteId });
+    return await generarConAPI({ mensaje, situacion, notas, precio, clienteId, modo, idioma });
   } catch (err) {
     if (!FALLBACK || !esProblemaDeConfiguracion(err)) throw err;
 
@@ -83,7 +83,7 @@ export async function generarRespuestas({ mensaje, situacion = null, notas = "",
   }
 }
 
-async function generarConAPI({ mensaje, situacion, notas, precio, clienteId }) {
+async function generarConAPI({ mensaje, situacion, notas, precio, clienteId, modo, idioma }) {
   const persona = loadPersona();
   const modelo = modeloEfectivo();
   const t0 = Date.now();
@@ -101,6 +101,8 @@ async function generarConAPI({ mensaje, situacion, notas, precio, clienteId }) {
         notes: notas,
         precio,
         contexto: clienteId ? contextoParaPrompt(clienteId) : "",
+          modo,
+          idioma,
       }) },
     ],
     response_format: {
@@ -161,12 +163,12 @@ async function generarConAPI({ mensaje, situacion, notas, precio, clienteId }) {
  * Devuelve el resultado completo, para poder guardarlo en la memoria.
  */
 export async function generarRespuestasEnDirecto(opciones, emitir) {
-  const { mensaje, situacion = null, notas = "", precio = "", clienteId = "" } = opciones;
+  const { mensaje, situacion = null, notas = "", precio = "", clienteId = "", modo = "responder", idioma = "en" } = opciones;
 
   if (MODO_SIMULADO) return await emitirSimulado({ mensaje, situacion }, emitir);
 
   try {
-    return await conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId }, emitir);
+    return await conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, modo, idioma }, emitir);
   } catch (err) {
     if (!FALLBACK || !esProblemaDeConfiguracion(err)) throw err;
     const { mensaje: motivo } = traducirError(err);
@@ -187,7 +189,7 @@ async function emitirSimulado(opciones, emitir, motivo) {
   return datos;
 }
 
-async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId }, emitir) {
+async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, modo, idioma }, emitir) {
   const persona = loadPersona();
   const modelo = modeloEfectivo();
   const t0 = Date.now();
@@ -207,6 +209,8 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId },
           notes: notas,
           precio,
           contexto: clienteId ? contextoParaPrompt(clienteId) : "",
+          modo,
+          idioma,
         }),
       },
     ],

@@ -50,8 +50,26 @@
 
   <!-- el recuadro para pegar no se va nunca -->
   <section class="bloque-entrada">
+
+    <div class="segmentado" id="modo" role="group" aria-label="Modo" style="margin-bottom:14px">
+      <button type="button" data-modo="responder" aria-pressed="true">El ha escrito</button>
+      <button type="button" data-modo="escribir" aria-pressed="false">Escribo yo</button>
+    </div>
+
     <label class="rotulo" for="mensaje">Que te ha escrito</label>
     <textarea id="mensaje" placeholder="Pega aqui su mensaje."></textarea>
+
+    <div id="fila-idioma" class="row hidden" style="margin-top:12px">
+      <span style="font-size:13.5px;color:var(--muted)">Escribirlo en</span>
+      <select id="idioma" style="flex:1 1 140px">
+        <option value="en">Ingles</option>
+        <option value="pt">Portugues</option>
+        <option value="es">Espanol</option>
+        <option value="fr">Frances</option>
+        <option value="it">Italiano</option>
+        <option value="de">Aleman</option>
+      </select>
+    </div>
 
     <details class="opciones">
       <summary>Opciones</summary>

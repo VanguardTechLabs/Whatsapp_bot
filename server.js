@@ -382,6 +382,8 @@ app.post("/api/generate", requireAuth, async (req, res) => {
   const notas = String(req.body?.notas ?? "").trim().slice(0, 2000);
   const precio = String(req.body?.precio ?? "").trim().slice(0, 60);
   const clienteId = String(req.body?.cliente ?? "").trim();
+  const modo = req.body?.modo === "escribir" ? "escribir" : "responder";
+  const idioma = String(req.body?.idioma ?? "en").trim().slice(0, 5) || "en";
 
   if (!mensaje) return res.status(400).json({ error: "Falta el mensaje del cliente." });
   if (mensaje.length > 6000) return res.status(400).json({ error: "El mensaje es demasiado largo." });
@@ -403,11 +405,11 @@ app.post("/api/generate", requireAuth, async (req, res) => {
 
     try {
       const datos = await generarRespuestasEnDirecto(
-        { mensaje, situacion, notas, precio, clienteId },
+        { mensaje, situacion, notas, precio, clienteId, modo, idioma },
         emitir
       );
       if (clienteId && obtenerCliente(clienteId)) {
-        anotarMensaje(clienteId, "cliente", mensaje);
+        anotarMensaje(clienteId, modo === "escribir" ? "maiko" : "cliente", mensaje);
         if (datos.detalle_para_recordar) anotarDetalle(clienteId, datos.detalle_para_recordar);
       }
     } catch (err) {
@@ -419,11 +421,11 @@ app.post("/api/generate", requireAuth, async (req, res) => {
   }
 
   try {
-    const datos = await generarRespuestas({ mensaje, situacion, notas, precio, clienteId });
+    const datos = await generarRespuestas({ mensaje, situacion, notas, precio, clienteId, modo, idioma });
 
     // Memoria: se apunta lo que dijo el cliente y lo que haya contado de si mismo.
     if (clienteId && obtenerCliente(clienteId)) {
-      anotarMensaje(clienteId, "cliente", mensaje);
+      anotarMensaje(clienteId, modo === "escribir" ? "maiko" : "cliente", mensaje);
       if (datos.detalle_para_recordar) anotarDetalle(clienteId, datos.detalle_para_recordar);
     }
 

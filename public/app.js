@@ -26,7 +26,33 @@ const el = {
   usarPrecio: $("usar-precio"),
   precio: $("precio"),
   resultado: $("resultado"),
+  modo: $("modo"),
+  idioma: $("idioma"),
+  filaIdioma: $("fila-idioma"),
+  rotulo: document.querySelector("label.rotulo"),
 };
+
+/* -------------------------------------------------------------------- modo
+ * Dos formas de usarlo: responder a lo que el ha escrito, o escribir ella
+ * primero (para abrir conversacion o decir algo en sus palabras).
+ */
+let modoActual = "responder";
+
+function ponerModo(nuevo) {
+  modoActual = nuevo === "escribir" ? "escribir" : "responder";
+  const escribiendoElla = modoActual === "escribir";
+
+  for (const b of el.modo.children) {
+    b.setAttribute("aria-pressed", String(b.dataset.modo === modoActual));
+  }
+  el.filaIdioma.classList.toggle("hidden", !escribiendoElla);
+  el.rotulo.textContent = escribiendoElla ? "Que le quieres decir" : "Que te ha escrito";
+  el.mensaje.placeholder = escribiendoElla
+    ? "Escribelo en espanol, a tu manera. Por ejemplo: que hace mucho que no hablamos y me he acordado de el."
+    : "Pega aqui su mensaje.";
+  el.generar.textContent = escribiendoElla ? "Escribir mensaje" : TEXTO_BOTON;
+  el.auto.closest("label").classList.toggle("hidden", escribiendoElla || !puedeLeerPortapapeles());
+}
 
 /* ------------------------------------------------------------------ vistas */
 
@@ -350,6 +376,8 @@ async function generar() {
         situacion: el.situacion.value || null,
         precio: el.usarPrecio.checked ? el.precio.value.trim() : "",
         cliente: el.cliente.value || "",
+        modo: modoActual,
+        idioma: el.idioma.value,
         directo: true,
       }),
     });
@@ -418,7 +446,7 @@ async function generar() {
   } finally {
     generando = false;
     el.generar.disabled = false;
-    el.generar.textContent = TEXTO_BOTON;
+    el.generar.textContent = modoActual === "escribir" ? "Escribir mensaje" : TEXTO_BOTON;
   }
 }
 
@@ -520,6 +548,11 @@ el.nuevoCliente.addEventListener("click", async () => {
   toast("Cliente creado");
 });
 
+el.modo.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-modo]");
+  if (b) ponerModo(b.dataset.modo);
+});
+
 el.usarPrecio.addEventListener("change", () => {
   el.precio.classList.toggle("hidden", !el.usarPrecio.checked);
   if (el.usarPrecio.checked) el.precio.focus();
@@ -571,7 +604,7 @@ if (puedeLeerPortapapeles()) {
   el.auto.checked = false;
   el.auto.disabled = true;
   el.auto.closest("label").classList.add("hidden");
-  el.generar.textContent = TEXTO_BOTON;
+  el.generar.textContent = modoActual === "escribir" ? "Escribir mensaje" : TEXTO_BOTON;
   estado(
     esTactil
       ? "Copia el mensaje del cliente y pulsa el boton."

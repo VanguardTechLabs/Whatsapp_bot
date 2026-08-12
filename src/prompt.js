@@ -150,11 +150,46 @@ El campo "etiqueta" es UNA sola palabra en espanol (Cercana, Juguetona, Misterio
 Devuelve el resultado en el formato JSON pedido, nada mas.`;
 }
 
-export function buildUserPrompt({ message, situation, notes, precio, contexto }) {
+/** Idiomas que se pueden elegir cuando escribe ella primero. */
+export const IDIOMAS_SALIDA = {
+  en: "ingles",
+  pt: "portugues",
+  es: "espanol",
+  fr: "frances",
+  it: "italiano",
+  de: "aleman",
+};
+
+export function buildUserPrompt({
+  message,
+  situation,
+  notes,
+  precio,
+  contexto,
+  modo = "responder",
+  idioma = "en",
+}) {
   const parts = [];
   // Quien es el cliente y que os habeis dicho antes, si es que hay historial.
   if (contexto) parts.push(contexto);
-  parts.push(`Mensaje que acaba de escribir el cliente:\n"""\n${message}\n"""`);
+
+  if (modo === "escribir") {
+    // Aqui no hay mensaje del cliente: es ella la que quiere decir algo.
+    const nombreIdioma = IDIOMAS_SALIDA[idioma] ?? "ingles";
+    parts.push(
+      `${loadPersona().nombre} quiere escribirle ella al cliente. Esto NO es un mensaje ` +
+        `del cliente: es lo que ella quiere decir, apuntado en espanol y a su manera:\n` +
+        `"""\n${message}\n"""\n\n` +
+        `Escribe TRES formas distintas de decir eso mismo en ${nombreIdioma}, con su voz, ` +
+        `su tono y todas sus reglas. Puedes reformularlo y darle vida, pero sin cambiar ` +
+        `lo que quiere transmitir ni añadir cosas que ella no ha dicho.\n` +
+        `- idioma_cliente: "${idioma}".\n` +
+        `- mensaje_en_espanol: repite tal cual lo que ella ha escrito arriba.\n` +
+        `- situacion: la que mejor encaje con lo que quiere conseguir.`
+    );
+  } else {
+    parts.push(`Mensaje que acaba de escribir el cliente:\n"""\n${message}\n"""`);
+  }
   if (situation) {
     parts.push(`Situacion forzada por el usuario: ${situation}. Usa esta, no la que detectarias tu.`);
   }
