@@ -26,6 +26,7 @@ const el = {
   usarPrecio: $("usar-precio"),
   precio: $("precio"),
   resultado: $("resultado"),
+  limpiar: $("limpiar"),
   modo: $("modo"),
   idioma: $("idioma"),
   filaIdioma: $("fila-idioma"),
@@ -218,6 +219,20 @@ async function pintarFicha() {
     el.fichaCliente.append(tHist, hilo);
     setTimeout(() => (hilo.scrollTop = hilo.scrollHeight), 0);
   }
+
+  const olvidar = document.createElement("button");
+  olvidar.type = "button";
+  olvidar.className = "olvidar";
+  olvidar.textContent = "Borrar toda la conversacion con " + c.nombre;
+  olvidar.addEventListener("click", async () => {
+    if (!confirm("Se borrara todo lo hablado con " + c.nombre + " y lo que sabe de el. El cliente se queda en la lista. Seguro?")) return;
+    const r = await fetch("/api/clientes/" + id + "/conversacion", { method: "DELETE" });
+    if (!r.ok) return error("No se ha podido borrar.");
+    limpiarTodo();
+    await cargarClientes();
+    toast("Conversacion borrada");
+  });
+  el.fichaCliente.append(olvidar);
 
   el.fichaCliente.classList.remove("hidden");
 }
@@ -548,6 +563,23 @@ el.nuevoCliente.addEventListener("click", async () => {
   await pintarFicha();
   toast("Cliente creado");
 });
+
+/** Vacia todo y deja el cursor listo para el siguiente cliente. */
+function limpiarTodo() {
+  el.mensaje.value = "";
+  ocultarResultado();
+  el.respuestas.replaceChildren();
+  error("");
+  el.usarPrecio.checked = false;
+  el.precio.value = "";
+  el.precio.classList.add("hidden");
+  el.situacion.value = "";
+  ultimoPortapapeles = "";
+  estado(esTactil ? "Copia el mensaje del cliente y pulsa el boton." : "Listo.");
+  el.mensaje.focus();
+}
+
+el.limpiar.addEventListener("click", limpiarTodo);
 
 el.modo.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-modo]");

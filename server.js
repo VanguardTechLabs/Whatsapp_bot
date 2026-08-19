@@ -36,6 +36,7 @@ import {
   borrarCliente,
   anotarMensaje,
   anotarDetalle,
+  borrarConversacion,
 } from "./src/clientes.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -290,6 +291,13 @@ app.delete("/api/clientes/:id", requireAuth, (req, res) => {
   if (!borrarCliente(req.params.id)) {
     return res.status(404).json({ error: "Ese cliente ya no existe." });
   }
+  res.json({ ok: true });
+});
+
+/** Vacia lo hablado con un cliente, pero lo deja en la lista. */
+app.delete("/api/clientes/:id/conversacion", requireAuth, (req, res) => {
+  const c = borrarConversacion(req.params.id);
+  if (!c) return res.status(404).json({ error: "Ese cliente ya no existe." });
   res.json({ ok: true });
 });
 

@@ -56,7 +56,11 @@
       <button type="button" data-modo="escribir" aria-pressed="false">Escribo yo</button>
     </div>
 
-    <label class="rotulo" for="mensaje">Que te ha escrito</label>
+    <div class="fila-rotulo">
+      <label class="rotulo" for="mensaje">Que te ha escrito</label>
+      <button id="limpiar" class="borrar-x" type="button"
+              title="Borrar y empezar de cero" aria-label="Borrar y empezar de cero">✕</button>
+    </div>
     <textarea id="mensaje" placeholder="Pega aqui su mensaje."></textarea>
 
     <div id="fila-idioma" class="row hidden" style="margin-top:12px">

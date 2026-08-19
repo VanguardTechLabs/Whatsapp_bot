@@ -773,3 +773,44 @@ kbd {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* La X para vaciar la pantalla y empezar con otro cliente. */
+.fila-rotulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fila-rotulo .rotulo { margin-bottom: 0; }
+
+.borrar-x {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--faint);
+  background: var(--vidrio-alto);
+  border: 1px solid var(--borde);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color .16s var(--ease), border-color .16s var(--ease);
+}
+.borrar-x:hover { color: var(--danger); border-color: var(--danger); }
+
+/* Vaciar la memoria de un cliente, dentro de su ficha. */
+.ficha .olvidar {
+  margin-top: 12px;
+  padding: 0;
+  width: auto;
+  font: inherit;
+  font-size: 13px;
+  color: var(--faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ficha .olvidar:hover { color: var(--danger); }

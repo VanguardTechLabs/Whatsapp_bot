@@ -121,6 +121,23 @@ export function anotarMensaje(id, de, texto) {
   return c;
 }
 
+/**
+ * Vacia la conversacion de un cliente: se olvida lo hablado y los detalles,
+ * pero el cliente sigue existiendo. Para empezar de cero con la misma persona.
+ */
+export function borrarConversacion(id) {
+  const datos = leerTodo();
+  const c = datos.clientes.find((x) => x.id === id);
+  if (!c) return null;
+
+  c.historial = [];
+  c.detalles = [];
+  c.actualizado = new Date().toISOString();
+
+  guardarTodo(datos);
+  return c;
+}
+
 /** Guarda un detalle nuevo, sin repetir los que ya estaban. */
 export function anotarDetalle(id, detalle) {
   const limpio = String(detalle ?? "").trim();
