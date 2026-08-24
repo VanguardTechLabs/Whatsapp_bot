@@ -1,12 +1,12 @@
 /**
  * Donde se guarda lo que la aplicacion escribe: ajustes, clientes y el estilo.
  *
- * En local es la carpeta `config/` de siempre. En un servidor como Railway el
- * disco se borra en cada despliegue, asi que hay que apuntar DATA_DIR a un
- * volumen (por ejemplo /data) para que no se pierdan ni la clave, ni los
- * clientes, ni las conversaciones.
+ * Por defecto es la carpeta `config/` del propio repositorio. Eso vale para
+ * probar, pero no para el servidor: cualquier `git pull` o `git checkout` que
+ * toque esa carpeta se lleva por delante la clave, los clientes y las
+ * conversaciones. En el servidor se apunta DATA_DIR fuera del repositorio:
  *
- *   DATA_DIR=/data
+ *   DATA_DIR=C:\asistente-datos
  *
  * El fichero `config/persona.json` del repositorio es solo la plantilla: la
  * primera vez se copia a DATA_DIR y a partir de ahi se edita la copia. Asi un

@@ -5,9 +5,9 @@
  * ultimas cosas que se han dicho. Con eso el asistente deja de tratar cada
  * mensaje como si fuera el primero.
  *
- * Se guarda en config/clientes.json, igual que el resto de ajustes: fuera de
- * git, y en el servidor. Cuidado en Railway: sin un volumen se pierde al
- * volver a desplegar.
+ * Se guarda en clientes.json dentro de DATA_DIR, igual que el resto de
+ * ajustes: fuera de git. En el servidor DATA_DIR apunta fuera del repositorio,
+ * para que actualizar el codigo no borre las conversaciones.
  */
 import fs from "node:fs";
 import crypto from "node:crypto";

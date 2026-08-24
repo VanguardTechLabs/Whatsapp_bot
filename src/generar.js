@@ -4,6 +4,7 @@ import { generarSimulado } from "./simulado.js";
 import { claveEfectiva, modeloEfectivo } from "./ajustes.js";
 import { contextoParaPrompt } from "./clientes.js";
 import { parsearParcial } from "./jsonParcial.js";
+import { limpiarDatos, limpiarRespuesta, limpiarTexto } from "./limpiar.js";
 
 const REASONING_EFFORT = (process.env.REASONING_EFFORT || "").trim();
 
@@ -134,7 +135,7 @@ async function generarConAPI({ mensaje, situacion, notas, precio, clienteId, mod
   const bruto = choice?.message?.content;
   if (!bruto) throw new ErrorGeneracion("vacio", "Respuesta vacia del modelo.");
 
-  const data = JSON.parse(bruto);
+  const data = limpiarDatos(JSON.parse(bruto));
   data.respuestas = (data.respuestas ?? []).slice(0, 3);
   if (data.respuestas.length === 0) {
     throw new ErrorGeneracion("vacio", "El modelo no devolvio ninguna respuesta.");
@@ -247,7 +248,7 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
       // Solo cuando la frase ya esta cerrada, para no mostrarla a trozos.
       if (bruto.includes('"situacion"') || bruto.includes('"motivo_situacion"')) {
         traduccionEnviada = true;
-        emitir({ t: "traduccion", texto: parcial.mensaje_en_espanol });
+        emitir({ t: "traduccion", texto: limpiarTexto(parcial.mensaje_en_espanol) });
       }
     }
     if (!situacionEnviada && parcial.motivo_situacion && parcial.situacion) {
@@ -257,7 +258,7 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
           t: "situacion",
           situacion: parcial.situacion,
           idioma: parcial.idioma_cliente ?? "",
-          motivo: parcial.motivo_situacion,
+          motivo: limpiarTexto(parcial.motivo_situacion),
         });
       }
     }
@@ -268,11 +269,12 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
       const esUltima = i === parcial.respuestas.length - 1;
       if (esUltima && !bruto.trimEnd().endsWith("}") && !bruto.includes(`"espanol"`, bruto.lastIndexOf(r.espanol))) continue;
       respuestasEnviadas.add(i);
-      emitir({ t: "respuesta", i, etiqueta: r.etiqueta, texto: r.texto, espanol: r.espanol });
+      const limpia = limpiarRespuesta(r);
+      emitir({ t: "respuesta", i, etiqueta: limpia.etiqueta, texto: limpia.texto, espanol: limpia.espanol });
     }
   }
 
-  const datos = JSON.parse(bruto);
+  const datos = limpiarDatos(JSON.parse(bruto));
   datos.respuestas = (datos.respuestas ?? []).slice(0, 3);
   if (datos.respuestas.length === 0) {
     throw new ErrorGeneracion("vacio", "El modelo no devolvio ninguna respuesta.");

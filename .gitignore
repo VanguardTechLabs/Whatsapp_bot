@@ -3,3 +3,13 @@ node_modules/
 *.log
 config/ajustes.json
 config/clientes.json
+
+# Instrucciones para la clienta: llevan la direccion y no deben estar en git.
+mensaje-cliente.txt
+
+# Generado por servidor/instalar.ps1 a partir de la plantilla.
+nginx/asistente.conf
+servidor/dominio.txt
+
+# Registros de arranque de la aplicacion.
+logs/

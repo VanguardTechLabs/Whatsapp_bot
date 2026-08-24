@@ -1,0 +1,104 @@
+# ---------------------------------------------------------------------------
+# Asistente Maiko  —  __DOMINIO__
+#
+# Este fichero lo GENERA servidor/instalar.ps1 a partir de la plantilla
+# nginx/asistente.conf.plantilla. No lo edites a mano: vuelve a lanzar
+# el instalador y se regenera.
+#
+# Se incluye desde C:\nginx\conf\nginx.conf, dentro del bloque http{}:
+#
+#     include __PROYECTO__/nginx/asistente.conf;
+#
+# La aplicacion escucha en 127.0.0.1:__PUERTO__ y nunca se publica ese puerto:
+# todo entra por nginx, que es quien pone el HTTPS.
+# ---------------------------------------------------------------------------
+
+# Freno de fuerza bruta contra el login. La aplicacion ya bloquea a los 8
+# intentos (server.js), esto corta antes de llegar siquiera a node.
+limit_req_zone $binary_remote_addr zone=asistente_login:10m rate=12r/m;
+
+upstream asistente_app {
+    server 127.0.0.1:__PUERTO__;
+    keepalive 8;
+}
+
+# --- Puerto 80: solo el reto ACME; lo demas se empuja a HTTPS ---------------
+# Sin este bloque el dominio cae en el default_server que devuelve 444 y
+# Let's Encrypt no puede validarlo.
+server {
+    listen       80;
+    server_name  __DOMINIO__;
+
+    location /.well-known/acme-challenge/ {
+        root          C:/nginx/html/acme;
+        default_type  "text/plain";
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- HTTPS: la aplicacion ---------------------------------------------------
+server {
+    listen       443 ssl;
+    http2        on;
+    server_name  __DOMINIO__;
+
+    ssl_certificate      __SSL__/fullchain.pem;
+    ssl_certificate_key  __SSL__/privkey.pem;
+    ssl_protocols        TLSv1.2 TLSv1.3;
+    ssl_ciphers          HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers  off;
+    ssl_session_cache    shared:ASISTENTE_SSL:10m;
+    ssl_session_timeout  1h;
+
+    # Aqui viajan una clave de acceso y conversaciones privadas de clientes.
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options    "nosniff" always;
+    add_header X-Frame-Options           "SAMEORIGIN" always;
+    add_header Referrer-Policy           "no-referrer" always;
+
+    # Que no aparezca en buscadores.
+    add_header X-Robots-Tag "noindex, nofollow" always;
+
+    # El cuerpo mas grande que acepta la aplicacion son 256 kb de JSON.
+    client_max_body_size 1m;
+
+    location = /api/login {
+        limit_req        zone=asistente_login burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass       http://asistente_app;
+        include          __PROYECTO__/nginx/proxy_params.conf;
+        proxy_read_timeout 30s;
+        proxy_send_timeout 30s;
+    }
+
+    # Las respuestas se van escribiendo en directo, una linea JSON por trozo.
+    # Si nginx las acumulara, la pantalla se quedaria en blanco hasta el final
+    # y se perderia justo lo que hace util la aplicacion.
+    #
+    # server.js ya manda `X-Accel-Buffering: no`, que nginx respeta; esto es
+    # el cinturon y los tirantes, por si esa cabecera se cae algun dia.
+    location = /api/generate {
+        proxy_pass      http://asistente_app;
+        include         __PROYECTO__/nginx/proxy_params.conf;
+
+        proxy_buffering off;
+        proxy_cache     off;
+        gzip            off;
+
+        # El cliente de OpenAI corta a los 90 s. nginx tiene que aguantar mas
+        # que eso, o seria nginx quien cortara primero y la aplicacion nunca
+        # llegaria a dar su mensaje de error.
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+
+    location / {
+        proxy_pass http://asistente_app;
+        include    __PROYECTO__/nginx/proxy_params.conf;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+}

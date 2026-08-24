@@ -42,6 +42,11 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = Number(process.env.PORT || 3000);
+// Detras de un proxy la aplicacion no tiene por que asomarse a la red. Si
+// escuchara en todas las interfaces se podria entrar por http://ip-del-pc:3010
+// y saltarse de golpe el HTTPS, el freno del login y las cabeceras que pone
+// nginx. HOST=0.0.0.0 lo abre otra vez, para usarlo sin proxy delante.
+const HOST = process.env.HOST || "127.0.0.1";
 const APP_USER = process.env.APP_USER || "maiko";
 const APP_PASSWORD = process.env.APP_PASSWORD || "";
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
@@ -54,8 +59,8 @@ if (!hayPassword()) {
 }
 
 const app = express();
-// Detras de un proxy (Railway, Render, nginx) para que req.ip sea la IP real
-// y el freno del login no cuente todos los intentos como si fueran uno.
+// Detras de nginx, para que req.ip sea la IP real de quien llama y el freno
+// del login no cuente todos los intentos como si vinieran de uno solo.
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "256kb" }));
 app.use(cookieParser(SESSION_SECRET));
@@ -495,8 +500,8 @@ app.use(
   })
 );
 
-app.listen(PORT, () => {
-  console.log(`Asistente escuchando en http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Asistente escuchando en http://${HOST}:${PORT}`);
   if (MODO_SIMULADO) {
     console.log("MODO SIMULADO (MOCK=1): respuestas de ejemplo, no se llama a la API.");
   } else {

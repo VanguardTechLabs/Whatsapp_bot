@@ -159,8 +159,11 @@ login.
 
 - El login admite **8 intentos fallidos** por IP; después bloquea esa IP 10 minutos.
   Va en memoria: se reinicia al reiniciar el servidor.
-- Detrás de un proxy (Railway, Render, nginx) se usa `trust proxy` para que el
-  bloqueo cuente la IP real y no la del proxy.
+- Detrás de nginx se usa `trust proxy` para que el bloqueo cuente la IP real y
+  no la del proxy. nginx tiene además su propio `limit_req` delante del login.
+- La aplicación escucha en `127.0.0.1` (`HOST` en el `.env`), así que solo nginx
+  puede llegar a ella: nadie puede entrar por `http://ip-del-pc:3010` y saltarse
+  el HTTPS, el freno del login y las cabeceras de seguridad.
 - Las páginas HTML no son ficheros públicos (ver arriba).
 
 ### Seguridad de la clave
@@ -225,37 +228,89 @@ La aplicación escribe tres ficheros:
 | `clientes.json` | los clientes, sus detalles y el historial de conversación |
 | `persona.json` | el estilo, editado desde la página **Estilo** |
 
-Por defecto van a `config/`. **En un servidor eso no vale**: Railway y similares
-borran el disco en cada despliegue, así que se perderían los clientes, las
-conversaciones y el estilo que ella haya ajustado.
+Por defecto van a `config/`, dentro del repositorio. **En el servidor eso no
+vale**: cualquier `git pull` o `git checkout` que toque esa carpeta se lleva por
+delante los clientes, las conversaciones y el estilo que ella haya ajustado.
 
-La solución es un volumen y una variable:
+La solución es sacarlos del repositorio con una variable del `.env`:
 
 ```
-DATA_DIR=/data
+DATA_DIR=C:\asistente-datos
 ```
-
-En Railway: **Settings → Volumes → Add Volume**, punto de montaje `/data`.
 
 El `config/persona.json` del repositorio pasa a ser solo la **plantilla**: la
-primera vez se copia al volumen y a partir de ahí se edita la copia. Así un
-despliegue nuevo nunca pisa lo que ella haya cambiado.
+primera vez se copia a `DATA_DIR` y a partir de ahí se edita la copia. Así
+actualizar el código nunca pisa lo que ella haya cambiado.
 
-> No montes el volumen en `/app/config`: taparía la plantilla del repositorio y
-> el primer arranque se quedaría sin estilo.
+> No apuntes `DATA_DIR` a la propia carpeta `config/` del repositorio: taparía la
+> plantilla y volverías al problema de partida.
 
-> Persistencia con volumen verificada en produccion.
+Copia de seguridad = copiar esa carpeta. Son tres ficheros de texto.
 
-## 7. Despliegue
+## 7. Despliegue: nginx en un PC propio
 
-Necesita **HTTPS** para que funcione el pegado automático del portapapeles
-(los navegadores solo lo permiten en contexto seguro; en `localhost` también funciona).
-Cualquier hosting Node sirve (Railway, Render, Fly, un VPS con Caddy delante).
+Necesita **HTTPS**. No es un adorno: el pegado automático del portapapeles solo
+funciona en contexto seguro, y la cookie de sesión sale con el flag `secure`
+cuando `NODE_ENV=production`, así que por HTTP el login ni siquiera guardaría la
+sesión.
 
-En producción:
+El montaje es: **nginx** coge el 443 con un certificado de Let's Encrypt y pasa
+todo a la aplicación, que escucha solo en `127.0.0.1:3010`.
 
 ```
-NODE_ENV=production
+internet ──443──> nginx ──> 127.0.0.1:3010 ──> node server.js
 ```
 
-para que la cookie de sesión salga con el flag `secure`.
+### Lo que hay que tener antes
+
+- **Node 20 o más** y `npm install` hecho.
+- **nginx** instalado (aquí, en `C:\nginx`).
+- Un **dominio que apunte a la IP de este PC**. Con DuckDNS basta, y sirve
+  cualquier sub-nombre de uno que ya tengas.
+- Los **puertos 80 y 443 abiertos** desde internet hacia este PC: el 80 lo usa
+  Let's Encrypt para comprobar que el dominio es tuyo, el 443 es la aplicación.
+- **simple-acme** (`winget install simple-acme.simple-acme`) para el certificado.
+
+### Los pasos
+
+```powershell
+# 1. Dependencias y configuración
+npm install
+copy .env.example .env      # y rellenar APP_PASSWORD, SESSION_SECRET, DATA_DIR
+
+# 2. Montarlo en nginx  (PowerShell COMO ADMINISTRADOR)
+powershell -ExecutionPolicy Bypass -File servidor\instalar.ps1 -Dominio tu-dominio.duckdns.org
+
+# 3. Certificado de verdad  (también como administrador)
+powershell -ExecutionPolicy Bypass -File servidor\get-cert.ps1
+```
+
+`instalar.ps1` genera `nginx/asistente.conf` a partir de la plantilla, lo añade
+al `nginx.conf` del sistema (guardando antes una copia con fecha), **comprueba la
+configuración con `nginx -t` antes de reiniciar nada** y registra una tarea
+programada que vuelve a levantar la aplicación si se cae o si se reinicia Windows.
+
+Hasta que se pide el certificado, nginx usa uno autofirmado de arranque: la
+página funciona, pero el navegador avisa. `get-cert.ps1` comprueba primero que el
+dominio resuelve y que el puerto 80 llega de verdad desde internet, para no
+gastar intentos contra Let's Encrypt si el router no está abierto.
+
+### Qué hay en cada sitio
+
+| Fichero | Para qué |
+|---|---|
+| `nginx/asistente.conf.plantilla` | Los bloques de nginx. Es lo que se edita. |
+| `nginx/asistente.conf` | Generado con el dominio dentro. No se toca a mano. |
+| `nginx/proxy_params.conf` | Cabeceras `X-Forwarded-*` que necesita la aplicación. |
+| `servidor/instalar.ps1` | Monta todo lo anterior en el nginx del sistema. |
+| `servidor/get-cert.ps1` | Pide el certificado y deja la renovación automática. |
+| `servidor/arrancar.ps1` | Levanta la aplicación si no está en marcha. |
+
+### El detalle que no se puede tocar
+
+Las respuestas se van escribiendo en directo, una línea JSON por trozo. Si nginx
+las acumulara, la pantalla se quedaría en blanco hasta el final y se perdería
+justo lo que hace útil la aplicación. Por eso `location = /api/generate` lleva
+`proxy_buffering off`, y por eso el `proxy_read_timeout` de ahí es de 300 s: el
+cliente de OpenAI corta a los 90, y nginx tiene que aguantar más que él o sería
+nginx quien cortara primero y el error nunca llegaría a verse.
