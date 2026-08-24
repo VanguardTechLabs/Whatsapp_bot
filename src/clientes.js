@@ -138,6 +138,43 @@ export function borrarConversacion(id) {
   return c;
 }
 
+/**
+ * Reduce una frase a las palabras que llevan el significado, para poder
+ * comparar dos maneras de contar lo mismo.
+ *
+ * "Su hermana ha tenido un bebe por primera vez y el es tio" y "Su hermana
+ * acaba de tener un bebe y es su primer sobrino" son el mismo dato escrito
+ * distinto. Comparando el texto entero nunca coinciden.
+ */
+const VACIAS = new Set([
+  "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "al", "a", "y", "o",
+  "que", "se", "su", "sus", "es", "ha", "han", "he", "por", "para", "con", "sin", "en",
+  "lo", "le", "les", "me", "mi", "te", "tu", "muy", "mas", "ya", "acaba", "acaban", "vez",
+  "primera", "primer", "hace", "hacer", "tiene", "tener", "tenido", "esta", "estan", "ser",
+]);
+
+function huellaDetalle(texto) {
+  return new Set(
+    String(texto)
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((p) => p.length > 2 && !VACIAS.has(p))
+  );
+}
+
+/** Cuanto se parecen dos detalles, de 0 a 1 (Jaccard sobre palabras con peso). */
+function parecido(a, b) {
+  const A = huellaDetalle(a);
+  const B = huellaDetalle(b);
+  if (!A.size || !B.size) return 0;
+  let comunes = 0;
+  for (const p of A) if (B.has(p)) comunes++;
+  return comunes / Math.min(A.size, B.size);
+}
+
 /** Guarda un detalle nuevo, sin repetir los que ya estaban. */
 export function anotarDetalle(id, detalle) {
   const limpio = String(detalle ?? "").trim();
@@ -148,7 +185,13 @@ export function anotarDetalle(id, detalle) {
   if (!c) return null;
 
   c.detalles = c.detalles ?? [];
-  const yaEsta = c.detalles.some((d) => d.toLowerCase() === limpio.toLowerCase());
+  // Antes se comparaba el texto entero: cuando el mensaje nuevo no traia nada
+  // nuevo, el modelo reextraia un dato viejo del historial con otras palabras y
+  // entraba como si fuera otro. Con MAX_DETALLES en 25, las parafrasis acababan
+  // expulsando recuerdos de verdad.
+  const yaEsta = c.detalles.some(
+    (d) => d.toLowerCase() === limpio.toLowerCase() || parecido(d, limpio) >= 0.6
+  );
   if (!yaEsta) {
     c.detalles.push(limpio);
     if (c.detalles.length > MAX_DETALLES) c.detalles = c.detalles.slice(-MAX_DETALLES);

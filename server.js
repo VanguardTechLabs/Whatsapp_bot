@@ -346,7 +346,17 @@ app.put("/api/ajustes", requireAuth, async (req, res) => {
     parcial.modelo = req.body.modelo.trim();
   }
 
-  guardarAjustes(parcial);
+  // Express 4 no recoge lo que lanza un handler async: sin este try/catch, un
+  // disco lleno al guardar ajustes.json se convierte en unhandledRejection y
+  // Node se lleva el proceso por delante. Es la unica ruta async que no lo
+  // tenia, y justo la que escribe en disco.
+  try {
+    guardarAjustes(parcial);
+  } catch (err) {
+    console.error("[ajustes]", err?.message ?? err);
+    return res.status(500).json({ error: "No se han podido guardar los ajustes. Reintenta." });
+  }
+
   res.json({
     ok: true,
     clave_enmascarada: enmascarar(claveEfectiva()),
@@ -499,6 +509,16 @@ app.use(
     setHeaders: (res) => res.setHeader("Cache-Control", "no-cache"),
   })
 );
+
+// Red de seguridad. Si algun dia se cuela otra excepcion en un handler async,
+// que quede escrita y el servidor siga en pie: prefiero un error suelto en el
+// registro a que Nayane se encuentre la aplicacion caida sin saber por que.
+process.on("unhandledRejection", (motivo) => {
+  console.error("[promesa sin capturar]", motivo?.stack ?? motivo);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[excepcion sin capturar]", err?.stack ?? err);
+});
 
 app.listen(PORT, HOST, () => {
   console.log(`Asistente escuchando en http://${HOST}:${PORT}`);
