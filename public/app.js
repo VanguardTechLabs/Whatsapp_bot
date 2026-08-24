@@ -445,6 +445,10 @@ async function generar() {
           mostrarRespuesta(e.i, { etiqueta: e.etiqueta, texto: e.texto, espanol: e.espanol });
         } else if (e.t === "fin") {
           terminar(e._meta || {});
+        } else if (e.t === "aviso") {
+          // No es un error: hay respuestas validas en pantalla. Pero el cliente
+          // ha intentado colar algo y ella tiene que verlo antes de contestar.
+          error(e.mensaje);
         } else if (e.t === "error") {
           fallo = e.mensaje;
         }

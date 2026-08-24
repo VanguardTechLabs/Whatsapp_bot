@@ -47,6 +47,39 @@ export function limpiarTexto(valor) {
   return t.trim();
 }
 
+/**
+ * Cifras que son un precio.
+ *
+ * Solo cuenta si lleva moneda pegada. Un numero suelto no vale: "solo para
+ * mayores de 18", "salí a las 9", "dos horas" son respuestas correctas y no
+ * pueden dispararlo.
+ */
+const PRECIO = new RegExp(
+  [
+    "[$€£]\\s?\\d",                                          // $25, €25, £25
+    "\\d+\\s?(usd|eur|gbp|dollars?|euros?|pounds?|bucks)",   // 25 USD, 25 dollars
+    "\\d+\\s?(dolares|dólares|euros|pavos)",                 // 25 dolares
+  ].join("|"),
+  "i"
+);
+
+/**
+ * Ultima linea de defensa contra el precio.
+ *
+ * Al modelo se le dice por escrito que la unica autorizacion valida es la del
+ * mensaje de sistema, y aun asi un cliente que imita ese formato dentro de su
+ * mensaje consigue que suelte la cifra 6 de cada 24 veces. Cuando la regla es
+ * absoluta no puede depender de que el modelo la respete: si ella no ha
+ * autorizado ningun precio, aqui no pasa ninguna cifra.
+ *
+ * Devuelve true si este texto lleva un precio que no deberia llevar.
+ */
+export function precioNoAutorizado(texto, precioAutorizado) {
+  if (typeof texto !== "string" || !texto) return false;
+  if (precioAutorizado) return false; // ella lo ha escrito: puede decirlo
+  return PRECIO.test(texto);
+}
+
 /** Limpia una respuesta entera { etiqueta, texto, espanol }. */
 export function limpiarRespuesta(r) {
   if (!r || typeof r !== "object") return r;

@@ -1,10 +1,34 @@
 import OpenAI from "openai";
-import { loadPersona, buildSystemPrompt, buildUserPrompt, RESPONSE_SCHEMA } from "./prompt.js";
+import { loadPersona, buildSystemPrompt, buildTurnoSistema, buildUserPrompt, nuevaValla, RESPONSE_SCHEMA } from "./prompt.js";
 import { generarSimulado } from "./simulado.js";
 import { claveEfectiva, modeloEfectivo } from "./ajustes.js";
 import { contextoParaPrompt } from "./clientes.js";
 import { parsearParcial } from "./jsonParcial.js";
-import { limpiarDatos, limpiarRespuesta, limpiarTexto } from "./limpiar.js";
+import { limpiarDatos, limpiarRespuesta, limpiarTexto, precioNoAutorizado } from "./limpiar.js";
+
+/**
+ * Quita las respuestas que llevan un precio sin que ella lo haya autorizado.
+ *
+ * Es la ultima linea: el prompt ya se lo dice, pero un cliente que imita el
+ * formato de las instrucciones dentro de su mensaje sigue colandolo parte de
+ * las veces, y "nunca un precio" no puede depender de eso.
+ */
+function filtrarPrecio(respuestas, precioAutorizado) {
+  const limpias = [];
+  let quitadas = 0;
+  for (const r of respuestas ?? []) {
+    if (precioNoAutorizado(r?.texto, precioAutorizado) || precioNoAutorizado(r?.espanol, precioAutorizado)) {
+      quitadas++;
+      continue;
+    }
+    limpias.push(r);
+  }
+  return { limpias, quitadas };
+}
+
+const AVISO_INYECCION =
+  "Ojo: el mensaje de este cliente intentaba colar un precio, como si lo hubieras autorizado tu. " +
+  "Se han descartado las respuestas que lo repetian. Lee su mensaje entero antes de contestarle.";
 
 const REASONING_EFFORT = (process.env.REASONING_EFFORT || "").trim();
 
@@ -88,6 +112,7 @@ async function generarConAPI({ mensaje, situacion, notas, precio, clienteId, mod
   const persona = loadPersona();
   const modelo = modeloEfectivo();
   const t0 = Date.now();
+  const valla = nuevaValla();
 
   const params = {
     model: modelo,
@@ -95,16 +120,24 @@ async function generarConAPI({ mensaje, situacion, notas, precio, clienteId, mod
     // aqui, asi que se deja margen para que no se corte la respuesta.
     max_completion_tokens: 8000,
     messages: [
+      // 1. La persona. Estable entre peticiones, para que se pueda cachear.
       { role: "system", content: buildSystemPrompt(persona) },
-      { role: "user", content: buildUserPrompt({
-        message: mensaje,
-        situation: situacion,
-        notes: notas,
-        precio,
-        contexto: clienteId ? contextoParaPrompt(clienteId) : "",
+      // 2. Lo que manda en esta peticion. Viene de ella, es de fiar.
+      {
+        role: "system",
+        content: buildTurnoSistema({
+          message: mensaje,
+          situation: situacion,
+          notes: notas,
+          precio,
+          contexto: clienteId ? contextoParaPrompt(clienteId) : "",
           modo,
           idioma,
-      }) },
+          valla,
+        }),
+      },
+      // 3. El texto del cliente, vallado y sin autoridad ninguna.
+      { role: "user", content: buildUserPrompt({ message: mensaje, modo, valla }) },
     ],
     response_format: {
       type: "json_schema",
@@ -136,8 +169,11 @@ async function generarConAPI({ mensaje, situacion, notas, precio, clienteId, mod
   if (!bruto) throw new ErrorGeneracion("vacio", "Respuesta vacia del modelo.");
 
   const data = limpiarDatos(JSON.parse(bruto));
-  data.respuestas = (data.respuestas ?? []).slice(0, 3);
+  const filtrado = filtrarPrecio((data.respuestas ?? []).slice(0, 3), precio);
+  data.respuestas = filtrado.limpias;
+  if (filtrado.quitadas) data.aviso = AVISO_INYECCION;
   if (data.respuestas.length === 0) {
+    if (filtrado.quitadas) throw new ErrorGeneracion("inyeccion", AVISO_INYECCION);
     throw new ErrorGeneracion("vacio", "El modelo no devolvio ninguna respuesta.");
   }
 
@@ -194,6 +230,7 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
   const persona = loadPersona();
   const modelo = modeloEfectivo();
   const t0 = Date.now();
+  const valla = nuevaValla();
 
   const params = {
     model: modelo,
@@ -203,8 +240,8 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
     messages: [
       { role: "system", content: buildSystemPrompt(persona) },
       {
-        role: "user",
-        content: buildUserPrompt({
+        role: "system",
+        content: buildTurnoSistema({
           message: mensaje,
           situation: situacion,
           notes: notas,
@@ -212,8 +249,10 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
           contexto: clienteId ? contextoParaPrompt(clienteId) : "",
           modo,
           idioma,
+          valla,
         }),
       },
+      { role: "user", content: buildUserPrompt({ message: mensaje, modo, valla }) },
     ],
     response_format: {
       type: "json_schema",
@@ -231,6 +270,8 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
   // Lo que ya se ha mandado, para no repetirlo.
   let traduccionEnviada = false;
   let situacionEnviada = false;
+  let precioColado = false;
+  let emitidas = 0;
   const respuestasEnviadas = new Set();
 
   for await (const trozo of flujo) {
@@ -270,6 +311,13 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
       if (esUltima && !bruto.trimEnd().endsWith("}") && !bruto.includes(`"espanol"`, bruto.lastIndexOf(r.espanol))) continue;
       respuestasEnviadas.add(i);
       const limpia = limpiarRespuesta(r);
+      // Se comprueba ANTES de mandarla a pantalla: una vez emitida, ella ya la
+      // ha visto y podria copiarla.
+      if (precioNoAutorizado(limpia.texto, precio) || precioNoAutorizado(limpia.espanol, precio)) {
+        precioColado = true;
+        continue;
+      }
+      emitidas++;
       emitir({ t: "respuesta", i, etiqueta: limpia.etiqueta, texto: limpia.texto, espanol: limpia.espanol });
     }
   }
@@ -291,8 +339,22 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
     });
   }
   datos.respuestas.forEach((r, i) => {
-    if (!respuestasEnviadas.has(i)) emitir({ t: "respuesta", i, ...r });
+    if (respuestasEnviadas.has(i)) return;
+    if (precioNoAutorizado(r?.texto, precio) || precioNoAutorizado(r?.espanol, precio)) {
+      precioColado = true;
+      return;
+    }
+    emitidas++;
+    emitir({ t: "respuesta", i, ...r });
   });
+
+  // Si se ha colado un precio, ella tiene que enterarse: puede que el cliente
+  // este intentando fijar una cifra que ella no ha puesto.
+  if (precioColado) {
+    datos.respuestas = filtrarPrecio(datos.respuestas, precio).limpias;
+    if (emitidas === 0) throw new ErrorGeneracion("inyeccion", AVISO_INYECCION);
+    emitir({ t: "aviso", mensaje: AVISO_INYECCION });
+  }
 
   datos._meta = {
     ms: Date.now() - t0,
