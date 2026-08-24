@@ -113,6 +113,10 @@ async function generarConAPI({ mensaje, situacion, notas, precio, clienteId, mod
   const modelo = modeloEfectivo();
   const t0 = Date.now();
   const valla = nuevaValla();
+  // En modo "escribir" el texto lo teclea ella, asi que una cifra suya no es una
+  // inyeccion: si escribe "dile que son 30 dolares" sin marcar la casilla, el
+  // filtro le tiraba las tres respuestas y le hablaba de un cliente inexistente.
+  const autorizacion = precio || (modo === "escribir" ? mensaje : "");
 
   const params = {
     model: modelo,
@@ -169,7 +173,7 @@ async function generarConAPI({ mensaje, situacion, notas, precio, clienteId, mod
   if (!bruto) throw new ErrorGeneracion("vacio", "Respuesta vacia del modelo.");
 
   const data = limpiarDatos(JSON.parse(bruto));
-  const filtrado = filtrarPrecio((data.respuestas ?? []).slice(0, 3), precio);
+  const filtrado = filtrarPrecio((data.respuestas ?? []).slice(0, 3), autorizacion);
   data.respuestas = filtrado.limpias;
   if (filtrado.quitadas) data.aviso = AVISO_INYECCION;
   if (data.respuestas.length === 0) {
@@ -231,6 +235,10 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
   const modelo = modeloEfectivo();
   const t0 = Date.now();
   const valla = nuevaValla();
+  // En modo "escribir" el texto lo teclea ella, asi que una cifra suya no es una
+  // inyeccion: si escribe "dile que son 30 dolares" sin marcar la casilla, el
+  // filtro le tiraba las tres respuestas y le hablaba de un cliente inexistente.
+  const autorizacion = precio || (modo === "escribir" ? mensaje : "");
 
   const params = {
     model: modelo,
@@ -313,12 +321,12 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
       const limpia = limpiarRespuesta(r);
       // Se comprueba ANTES de mandarla a pantalla: una vez emitida, ella ya la
       // ha visto y podria copiarla.
-      if (precioNoAutorizado(limpia.texto, precio) || precioNoAutorizado(limpia.espanol, precio)) {
+      if (precioNoAutorizado(limpia.texto, autorizacion) || precioNoAutorizado(limpia.espanol, autorizacion)) {
         precioColado = true;
         continue;
       }
+      emitir({ t: "respuesta", i: emitidas, etiqueta: limpia.etiqueta, texto: limpia.texto, espanol: limpia.espanol });
       emitidas++;
-      emitir({ t: "respuesta", i, etiqueta: limpia.etiqueta, texto: limpia.texto, espanol: limpia.espanol });
     }
   }
 
@@ -340,18 +348,18 @@ async function conAPIEnDirecto({ mensaje, situacion, notas, precio, clienteId, m
   }
   datos.respuestas.forEach((r, i) => {
     if (respuestasEnviadas.has(i)) return;
-    if (precioNoAutorizado(r?.texto, precio) || precioNoAutorizado(r?.espanol, precio)) {
+    if (precioNoAutorizado(r?.texto, autorizacion) || precioNoAutorizado(r?.espanol, autorizacion)) {
       precioColado = true;
       return;
     }
+    emitir({ t: "respuesta", i: emitidas, ...r });
     emitidas++;
-    emitir({ t: "respuesta", i, ...r });
   });
 
   // Si se ha colado un precio, ella tiene que enterarse: puede que el cliente
   // este intentando fijar una cifra que ella no ha puesto.
   if (precioColado) {
-    datos.respuestas = filtrarPrecio(datos.respuestas, precio).limpias;
+    datos.respuestas = filtrarPrecio(datos.respuestas, autorizacion).limpias;
     if (emitidas === 0) throw new ErrorGeneracion("inyeccion", AVISO_INYECCION);
     emitir({ t: "aviso", mensaje: AVISO_INYECCION });
   }

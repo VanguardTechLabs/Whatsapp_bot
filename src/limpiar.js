@@ -54,11 +54,30 @@ export function limpiarTexto(valor) {
  * mayores de 18", "salí a las 9", "dos horas" son respuestas correctas y no
  * pueden dispararlo.
  */
+const SIMBOLO = "[$€£¥₩₽]";
+const MONEDA =
+  "usd|eur|gbp|brl|mxn|ars|cop|clp|jpy|" +
+  "dollars?|euros?|pounds?|bucks|quid|" +
+  "dolares|d[oó]lares|euros|libras|pavos|pesos|reais|reales|yenes?|yen";
+// Numeros escritos con letra, por si la cifra no va en digitos.
+const CANTIDAD =
+  "\\d[\\d.,\\s]*|" +
+  "one|two|three|five|ten|twenty|thirty|forty|fifty|hundred|" +
+  "uno|dos|tres|cinco|diez|veinte|treinta|cuarenta|cincuenta|cien|ciento";
+
+/**
+ * La moneda puede ir delante o detras del numero. En ingles se escribe "$25"
+ * y "25 dollars", pero en espanol, portugues, frances, italiano y aleman se
+ * escribe "25 €": cinco de los seis idiomas de salida. La primera version de
+ * este regex solo cubria las dos formas inglesas y dejaba pasar 11 de 12
+ * maneras de escribir un precio.
+ */
 const PRECIO = new RegExp(
   [
-    "[$€£]\\s?\\d",                                          // $25, €25, £25
-    "\\d+\\s?(usd|eur|gbp|dollars?|euros?|pounds?|bucks)",   // 25 USD, 25 dollars
-    "\\d+\\s?(dolares|dólares|euros|pavos)",                 // 25 dolares
+    `${SIMBOLO}\\s*\\d`,                        // $25, € 25
+    `\\d\\s*${SIMBOLO}`,                        // 25€, 25 $
+    `(${CANTIDAD})\\s*(${MONEDA})\\b`,          // 25 USD, 25,00 euros, twenty dollars
+    `\\b(${MONEDA})\\s*(${CANTIDAD})`,          // EUR 25, USD 25
   ].join("|"),
   "i"
 );
