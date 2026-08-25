@@ -8,8 +8,21 @@
    ========================================================================== */
 
 :root {
+  /* Le dice al navegador que la pagina es oscura, para que pinte en oscuro lo
+     que dibuja el sistema y no la hoja de estilos: el desplegable de un
+     <select>, las barras de desplazamiento, el calendario de una fecha.
+     Sin esto, Windows abre la lista del desplegable sobre fondo BLANCO pero
+     usando nuestro color de texto (casi blanco), y las opciones se leen a
+     duras penas: solo se veia la que estaba resaltada. */
+  color-scheme: dark;
+
   --bg: #0d080f;
   --bg-2: #150d17;
+
+  /* Opacos a proposito: el fondo del desplegable lo pinta el sistema y no
+     admite transparencias como --vidrio-alto. */
+  --opcion-fondo: #1c1420;
+  --opcion-texto: #fbf3f6;
 
   /* Cristal: superficies que se apoyan en el fondo, no cajas opacas. */
   --vidrio: rgba(255, 255, 255, 0.045);
@@ -48,8 +61,12 @@
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
+    color-scheme: light;
+
     --bg: #faf6f8;
     --bg-2: #ffffff;
+    --opcion-fondo: #ffffff;
+    --opcion-texto: #1d1017;
     --vidrio: rgba(20, 8, 16, 0.035);
     --vidrio-alto: rgba(20, 8, 16, 0.06);
     --borde: rgba(20, 8, 16, 0.1);
@@ -57,7 +74,6 @@
     --text: #1d1017;
     --muted: #6a5560;
     --faint: #94808c;
-    --a1: #e63c६f;
     --a1: #e03c6f;
     --a2: #e07a3c;
     --accent: #d8455f;
@@ -70,8 +86,12 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
+
   --bg: #faf6f8;
   --bg-2: #ffffff;
+  --opcion-fondo: #ffffff;
+  --opcion-texto: #1d1017;
   --vidrio: rgba(20, 8, 16, 0.035);
   --vidrio-alto: rgba(20, 8, 16, 0.06);
   --borde: rgba(20, 8, 16, 0.1);
@@ -270,6 +290,22 @@ textarea:focus, select:focus, input:focus {
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 select { cursor: pointer; padding: 12px 14px; font-size: 15px; }
+
+/* La lista que se abre al pulsar un <select> la dibuja el sistema operativo,
+   no esta hoja: hereda el color del texto pero NO el fondo, porque el nuestro
+   es translucido. Hay que darle los dos, y opacos. `color-scheme` de arriba ya
+   arregla esto en los navegadores modernos; esto es el cinturon para los que
+   siguen abriendo la lista en blanco. */
+select option {
+  background-color: var(--opcion-fondo);
+  color: var(--opcion-texto);
+}
+/* Firefox pinta en gris la opcion vacia ("Detectar sola") y se pierde. */
+select option:checked,
+select option:hover {
+  background-color: var(--accent);
+  color: var(--accent-ink);
+}
 
 .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
