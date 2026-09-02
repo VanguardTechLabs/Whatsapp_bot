@@ -850,3 +850,21 @@ kbd {
   text-underline-offset: 3px;
 }
 .ficha .olvidar:hover { color: var(--danger); }
+
+/* --------------------------------------------------------------------- voz */
+
+/* Mientras graba, el boton late en rojo: se ve de un vistazo que el microfono
+   sigue abierto, que es justo lo que da miedo olvidarse. */
+#grabar.grabando {
+  border-color: var(--danger);
+  color: var(--danger);
+  animation: latido 1.4s var(--ease) infinite;
+}
+@keyframes latido {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 38%, transparent); }
+  50%      { box-shadow: 0 0 0 7px color-mix(in srgb, var(--danger) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #grabar.grabando { animation: none; }
+}
+#grabar-estado { font-variant-numeric: tabular-nums; }

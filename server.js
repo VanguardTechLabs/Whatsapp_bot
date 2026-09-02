@@ -11,7 +11,6 @@ import {
   generarRespuestas,
   generarRespuestasEnDirecto,
   probarClave,
-  listarModelos,
   traducirError,
   MODO_SIMULADO,
 } from "./src/generar.js";
@@ -28,6 +27,7 @@ import {
   verificarPassword,
   guardarPassword,
 } from "./src/ajustes.js";
+import { transcribir, ErrorVoz, MAX_AUDIO } from "./src/transcribir.js";
 import {
   listarClientes,
   obtenerCliente,
@@ -342,9 +342,6 @@ app.put("/api/ajustes", requireAuth, async (req, res) => {
     parcial.openai_api_key = clave;
   }
 
-  if (typeof req.body?.modelo === "string") {
-    parcial.modelo = req.body.modelo.trim();
-  }
 
   // Express 4 no recoge lo que lanza un handler async: sin este try/catch, un
   // disco lleno al guardar ajustes.json se convierte en unhandledRejection y
@@ -385,17 +382,36 @@ app.post("/api/ajustes/probar", requireAuth, async (req, res) => {
   }
 });
 
-/** Modelos disponibles en la cuenta, para el desplegable. */
-app.get("/api/ajustes/modelos", requireAuth, async (req, res) => {
-  const clave = claveEfectiva();
-  if (!clave) return res.status(400).json({ error: "Todavia no hay ninguna clave puesta." });
-  try {
-    res.json({ modelos: await listarModelos(clave) });
-  } catch (err) {
-    const { status, mensaje } = traducirError(err);
-    res.status(status).json({ error: mensaje });
+
+/* ----------------------------------------------------------------- voz --- */
+
+/**
+ * Nota de voz -> texto. Ella habla en espanol y lo dicho cae en el cuadro.
+ *
+ * El audio llega en crudo, no como JSON ni como formulario: es lo mas simple
+ * que funciona igual en el iPhone y en el escritorio, y evita meter una
+ * dependencia nueva solo para leer un fichero. `express.raw` va aqui y no
+ * arriba para no tocar el resto de rutas, que siguen siendo JSON.
+ */
+app.post(
+  "/api/transcribir",
+  requireAuth,
+  express.raw({ type: () => true, limit: MAX_AUDIO }),
+  async (req, res) => {
+    try {
+      const texto = await transcribir(req.body, req.get("content-type"));
+      res.json({ texto });
+    } catch (err) {
+      if (err instanceof ErrorVoz) {
+        const status = err.codigo === "sin-clave" || err.codigo === "formato" || err.codigo === "grande" ? 400 : 422;
+        return res.status(status).json({ error: err.message });
+      }
+      const { status, mensaje } = traducirError(err);
+      console.error("[transcribir]", err?.status ?? "", err?.message ?? err);
+      res.status(status).json({ error: mensaje });
+    }
   }
-});
+);
 
 /* ------------------------------------------------------------ generate --- */
 

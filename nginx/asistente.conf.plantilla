@@ -95,6 +95,18 @@ server {
         proxy_send_timeout 300s;
     }
 
+    # Las notas de voz suben en crudo. El limite general de 1 MB se queda corto
+    # si el movil graba a bitrate alto (Safari no siempre respeta el que le
+    # pedimos), y nginx cortaria con un 413 antes de que la aplicacion se entere.
+    location = /api/transcribir {
+        proxy_pass http://asistente_app;
+        include    __PROYECTO__/nginx/proxy_params.conf;
+        client_max_body_size 20m;
+        proxy_request_buffering on;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+
     location / {
         proxy_pass http://asistente_app;
         include    __PROYECTO__/nginx/proxy_params.conf;

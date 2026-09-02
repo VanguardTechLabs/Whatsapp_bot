@@ -54,15 +54,21 @@ export function claveEfectiva() {
 }
 
 /**
- * El modelo que se usa de verdad.
+ * El modelo. Ya no se elige desde la web: lo decidimos nosotros.
  *
- * Por defecto gpt-4.1: es el que salio mejor en la comparativa (mas rapido y
- * escribe mejor) y esta disponible sin verificar la organizacion, cosa que
- * gpt-5 si exige. Asi, si algun dia falta la variable MODEL, la aplicacion
- * sigue funcionando en vez de caerse al modo de prueba.
+ * gpt-4.1 por tres razones. Salio mejor en la comparativa (`npm run comparar`):
+ * mas rapido y escribe mejor. Esta disponible sin verificar la organizacion,
+ * cosa que gpt-5 si exige. Y sobre todo: TODO el estilo esta ajustado y probado
+ * contra el, en cuatro pasadas completas de 30 escenarios. Cambiar de modelo
+ * invalida ese trabajo, asi que no es una casilla que deba tocar nadie sin
+ * volver a pasar las pruebas.
+ *
+ * MODEL en el .env lo sigue pudiendo cambiar, para probar sin tocar codigo.
  */
+export const MODELO_RECOMENDADO = "gpt-4.1";
+
 export function modeloEfectivo() {
-  return leerAjustes().modelo || process.env.MODEL || "gpt-4.1";
+  return process.env.MODEL || MODELO_RECOMENDADO;
 }
 
 /** De donde viene la clave, para poder explicarlo en la pantalla de ajustes. */

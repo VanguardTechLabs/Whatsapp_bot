@@ -30,6 +30,11 @@ const el = {
   modo: $("modo"),
   idioma: $("idioma"),
   filaIdioma: $("fila-idioma"),
+  filaVoz: $("fila-voz"),
+  grabar: $("grabar"),
+  grabarIcono: $("grabar-icono"),
+  grabarTexto: $("grabar-texto"),
+  grabarEstado: $("grabar-estado"),
   rotulo: document.querySelector("label.rotulo"),
 };
 
@@ -47,6 +52,9 @@ function ponerModo(nuevo) {
     b.setAttribute("aria-pressed", String(b.dataset.modo === modoActual));
   }
   el.filaIdioma.classList.toggle("hidden", !escribiendoElla);
+  // El microfono es para SU voz, en espanol. En "El ha escrito" el cuadro
+  // lleva el mensaje del cliente, asi que ahi no pinta nada.
+  el.filaVoz.classList.toggle("hidden", !escribiendoElla || !puedeGrabar());
   el.rotulo.textContent = escribiendoElla ? "Que le quieres decir" : "Que te ha escrito";
   el.mensaje.placeholder = escribiendoElla
     ? "Escribelo en espanol, a tu manera. Por ejemplo: que hace mucho que no hablamos y me he acordado de el."
@@ -469,6 +477,140 @@ async function generar() {
     el.generar.textContent = modoActual === "escribir" ? "Escribir mensaje" : TEXTO_BOTON;
   }
 }
+
+/* ------------------------------------------------------------------ voz
+ * Ella habla en espanol y lo que dice cae en el cuadro. A partir de ahi es el
+ * flujo de "Escribo yo" de siempre: sus palabras, en el idioma que elija.
+ */
+
+/** El iPhone graba en mp4 y el resto en webm. Se coge el primero que acepte. */
+function formatoDeGrabacion() {
+  if (typeof MediaRecorder === "undefined") return null;
+  const candidatos = [
+    "audio/mp4",                 // Safari, iPhone
+    "audio/webm;codecs=opus",    // Chrome, Firefox, Android
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+  ];
+  return candidatos.find((t) => MediaRecorder.isTypeSupported(t)) ?? null;
+}
+
+const puedeGrabar = () =>
+  Boolean(navigator.mediaDevices?.getUserMedia) &&
+  window.isSecureContext &&
+  formatoDeGrabacion() !== null;
+
+let grabadora = null;
+let pistaAudio = null;
+let cronometro = null;
+
+/** Corta sola: una nota larguisima cuesta dinero y no aporta nada. */
+const MAX_SEGUNDOS = 120;
+
+function pintarGrabando(segundos) {
+  el.grabar.classList.add("grabando");
+  el.grabarIcono.textContent = "⏹";
+  el.grabarTexto.textContent = "Parar";
+  const m = String(Math.floor(segundos / 60));
+  const s = String(segundos % 60).padStart(2, "0");
+  el.grabarEstado.textContent = `Grabando ${m}:${s}`;
+}
+
+function pintarParado(estado = "") {
+  el.grabar.classList.remove("grabando");
+  el.grabarIcono.textContent = "🎤";
+  el.grabarTexto.textContent = "Hablar";
+  el.grabarEstado.textContent = estado;
+}
+
+function soltarMicrofono() {
+  clearInterval(cronometro);
+  cronometro = null;
+  pistaAudio?.getTracks().forEach((t) => t.stop()); // apaga el punto rojo del movil
+  pistaAudio = null;
+  grabadora = null;
+}
+
+async function empezarAGrabar() {
+  const tipo = formatoDeGrabacion();
+  try {
+    pistaAudio = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    // En el iPhone esto suele ser el permiso del microfono, no un fallo real.
+    pintarParado("");
+    error(
+      e?.name === "NotAllowedError"
+        ? "No me dejas usar el microfono. En el iPhone: Ajustes > Safari > Microfono, y permitelo para esta pagina."
+        : "No he podido encender el microfono. Escribelo a mano y sigue igual."
+    );
+    return;
+  }
+
+  const trozos = [];
+  // 32 kbps sobra para voz: lo que se transcribe es lo que se dice, no la
+  // calidad del sonido. Ademas asi la nota pesa poco y sube rapido con datos
+  // moviles. Safari puede ignorarlo y grabar mas alto, por eso ademas hay un
+  // tope de tiempo y el servidor avisa si llega demasiado grande.
+  grabadora = new MediaRecorder(pistaAudio, { mimeType: tipo, audioBitsPerSecond: 32000 });
+  grabadora.addEventListener("dataavailable", (ev) => { if (ev.data.size) trozos.push(ev.data); });
+  grabadora.addEventListener("stop", () => {
+    const audio = new Blob(trozos, { type: tipo });
+    soltarMicrofono();
+    enviarAudio(audio, tipo);
+  });
+
+  grabadora.start();
+  error("");
+  let segundos = 0;
+  pintarGrabando(0);
+  cronometro = setInterval(() => {
+    segundos += 1;
+    pintarGrabando(segundos);
+    if (segundos >= MAX_SEGUNDOS) pararDeGrabar();
+  }, 1000);
+}
+
+function pararDeGrabar() {
+  if (grabadora?.state === "recording") grabadora.stop();
+  else soltarMicrofono();
+}
+
+async function enviarAudio(audio, tipo) {
+  if (!audio.size) return pintarParado("");
+  pintarParado("Pasando a texto...");
+  el.grabar.disabled = true;
+  try {
+    const r = await fetch("/api/transcribir", {
+      method: "POST",
+      headers: { "Content-Type": tipo },
+      body: audio,
+    });
+    if (r.status === 401) { location.href = "/login"; return; }
+    // 413 lo devuelve nginx, no la aplicacion, y sin JSON: hay que explicarlo
+    // aparte o saldria un error incomprensible.
+    if (r.status === 413) throw new Error("La nota de voz pesa demasiado. Grabala mas corta, en dos veces si hace falta.");
+    const datos = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(datos.error || "No se ha podido pasar la voz a texto.");
+
+    // Se anade a lo que ya hubiera, para poder dictar en varias veces.
+    const previo = el.mensaje.value.trim();
+    el.mensaje.value = previo ? previo + " " + datos.texto : datos.texto;
+    el.mensaje.focus();
+    el.mensaje.setSelectionRange(el.mensaje.value.length, el.mensaje.value.length);
+    pintarParado("Listo. Lee que este bien y dale a generar.");
+    toast("Escrito lo que has dicho");
+  } catch (e) {
+    pintarParado("");
+    error(e.message);
+  } finally {
+    el.grabar.disabled = false;
+  }
+}
+
+el.grabar.addEventListener("click", () => {
+  if (grabadora?.state === "recording") pararDeGrabar();
+  else empezarAGrabar();
+});
 
 /* --------------------------------------------------------------- copiar */
 

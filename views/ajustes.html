@@ -58,17 +58,6 @@
     </div>
   </div>
 
-  <!-- modelo -->
-  <div class="card">
-    <div class="label">Modelo</div>
-    <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px">
-      Solo cambialo si te lo pido. Unos escriben mejor, otros son mas baratos.
-    </p>
-    <div class="row">
-      <select id="modelo" style="flex:1"></select>
-      <button id="guardar-modelo" class="secundario" type="button">Guardar</button>
-    </div>
-  </div>
 
   <!-- clave de acceso -->
   <div class="card">
@@ -114,7 +103,7 @@
   <ul>
     <li><b>«La clave no es valida»</b> — te has dejado un trozo al copiar. Copiala otra vez entera, desde <code>sk-</code> hasta el ultimo caracter.</li>
     <li><b>«La cuenta esta a cero»</b> — la clave esta bien, pero falta comprar saldo. Entra en platform.openai.com, apartado <b>Billing</b>, y pulsa <b>Add to credit balance</b>. Con 5 dolares sobra. Crear una clave nueva no añade dinero.</li>
-    <li><b>«El modelo no existe»</b> — elige otro en la lista de arriba.</li>
+    <li><b>«El modelo no existe»</b> — avisame y lo miro yo. Tu no tienes que elegir ninguno.</li>
   </ul>
 
 </div>
@@ -163,23 +152,6 @@
       det.textContent = "Pega tu clave abajo para poder usar el asistente.";
     }
 
-    const sel = $("modelo");
-    if (!sel.options.length) {
-      sel.replaceChildren(new Option(a.modelo, a.modelo, true, true));
-    }
-    sel.value = a.modelo;
-
-    if (a.clave_configurada) cargarModelos(a.modelo);
-  }
-
-  async function cargarModelos(actual) {
-    try {
-      const { modelos } = await pedir("/api/ajustes/modelos");
-      const sel = $("modelo");
-      sel.replaceChildren(...modelos.map((m) => new Option(m, m, m === actual, m === actual)));
-      if (!modelos.includes(actual)) sel.prepend(new Option(actual, actual, true, true));
-      sel.value = actual;
-    } catch { /* sin clave valida todavia: se deja el desplegable como esta */ }
   }
 
   $("guardar").addEventListener("click", async () => {
@@ -225,16 +197,6 @@
     } catch (e) { error(e.message); }
   });
 
-  $("guardar-modelo").addEventListener("click", async () => {
-    try {
-      await pedir("/api/ajustes", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ modelo: $("modelo").value }),
-      });
-      ok("Modelo guardado.");
-    } catch (e) { error(e.message); }
-  });
 
   /* ----------------------------------------------------------- clave de acceso */
 

@@ -63,6 +63,15 @@
     </div>
     <textarea id="mensaje" placeholder="Pega aqui su mensaje."></textarea>
 
+    <!-- Hablar en vez de escribir. Se oculta si el navegador no sabe grabar. -->
+    <div id="fila-voz" class="row hidden" style="margin-top:10px">
+      <button id="grabar" class="secundario" type="button" style="flex:1 1 auto">
+        <span id="grabar-icono" aria-hidden="true">🎤</span>
+        <span id="grabar-texto">Hablar</span>
+      </button>
+      <span id="grabar-estado" style="font-size:13.5px;color:var(--muted)"></span>
+    </div>
+
     <div id="fila-idioma" class="row hidden" style="margin-top:12px">
       <span style="font-size:13.5px;color:var(--muted)">Escribirlo en</span>
       <select id="idioma" style="flex:1 1 140px">
