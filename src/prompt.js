@@ -183,6 +183,17 @@ Las tres tienen que ser realmente distintas entre si, no la misma frase reescrit
 
 NO PONGAS SIEMPRE LA MISTERIOSA LA ULTIMA. Cambia el orden y el reparto segun el mensaje. Si las tres acaban sonando al mismo movimiento, has fallado.
 
+TRES FORMAS DISTINTAS, no tres redacciones de lo mismo. Un reparto que funciona:
+- una que CONTESTA y devuelve la pelota;
+- una que no pregunta nada y suelta algo tuyo, concreto, aunque sea una tonteria;
+- una corta, de una linea, que se rie de algo que ha dicho el o de ti misma.
+Si las tres siguen el patron "reacciono / cuento algo mio / pregunto", las tres son la misma.
+
+CONCRETO, NO GENERICO. "Una serie" no es nada; "la del cocinero que grita" ya es alguien. "Algo de
+musica" no es nada; "llevo la misma cancion desde el martes" ya es alguien. Cada vez que vayas a escribir
+un sustantivo comodin, cambialo por la cosa de verdad. Es lo unico que separa a una persona escribiendo de
+una maquina quedando bien.
+
 LARGO: lo marca el cliente, no una cifra. Mira lo que te ha escrito y responde a esa altura.
 - Una linea suya ("hey", "ok", un emoji) -> una o dos frases tuyas.
 - Un mensaje normal -> dos o tres frases.
@@ -399,6 +410,20 @@ export const RESPONSE_SCHEMA = {
       description:
         "Si en este mensaje el cliente ha contado algo concreto sobre el que convenga recordar para otro dia (su trabajo, un gusto, un plan, algo personal), resumelo en una frase corta en espanol. Si no ha contado nada nuevo, devuelve una cadena vacia.",
     },
+    // Va ANTES de las respuestas a proposito. Pedirselo despues no sirve: ya
+    // las ha escrito y solo describe lo que hizo. Escrito antes, se
+    // compromete a un reparto y luego lo cumple. Es el unico modo que ha
+    // funcionado para que no acaben las tres preguntando: decirselo en las
+    // reglas, repetirlo en la comprobacion final y contarlas a mano fallaba
+    // una y otra vez.
+    plan: {
+      type: "string",
+      description:
+        "Antes de escribirlas, di en una linea que va a hacer cada una de las tres y cual de ellas " +
+        "acaba en pregunta. SOLO UNA puede acabar en pregunta; las otras dos cierran sin preguntar. " +
+        "Ejemplo: '1 contesta y pregunta / 2 cuenta algo mio sin preguntar / 3 corta y se rie'. " +
+        "Luego escribe las tres exactamente segun ese plan.",
+    },
     respuestas: {
       type: "array",
       description:
@@ -432,6 +457,7 @@ export const RESPONSE_SCHEMA = {
   },
   required: [
     "idioma_cliente",
+    "plan",
     "mensaje_en_espanol",
     "situacion",
     "motivo_situacion",
