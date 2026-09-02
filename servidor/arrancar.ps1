@@ -29,6 +29,43 @@ if (Test-Path $env0) {
     if ($m) { $Puerto = [int]$m.Matches[0].Groups[1].Value }
 }
 
+# --- reinicio pedido a mano -------------------------------------------------
+#
+# La aplicacion la arranca esta tarea, que corre como SYSTEM. Eso esta bien
+# para que sobreviva a un reinicio de Windows, pero deja un problema: despues
+# de actualizar el codigo no se puede reiniciar sin abrir un PowerShell como
+# administrador, porque un usuario normal no puede parar un proceso de SYSTEM.
+#
+# Con dejar un fichero `logs\reiniciar` basta: en la siguiente vuelta (como
+# mucho cinco minutos) esta tarea lo ve, para la aplicacion y la vuelve a
+# levantar con el codigo nuevo.
+#
+# Solo toca el proceso que escucha en NUESTRO puerto y que ademas es un node
+# ejecutando server.js. En esta maquina hay otro node (el Crypto Radar, en el
+# 3000), nginx y el broker MQTT: no se puede confundir con ninguno.
+$Marca = Join-Path $Registro 'reiniciar'
+if (Test-Path $Marca) {
+    # Se borra ANTES de nada: si algo fallara despues, no queda un bucle de
+    # reinicios cada cinco minutos.
+    Remove-Item $Marca -Force -ErrorAction SilentlyContinue
+    Nota "Reinicio pedido"
+
+    foreach ($con in @(Get-NetTCPConnection -LocalPort $Puerto -State Listen -ErrorAction SilentlyContinue)) {
+        $proc = Get-Process -Id $con.OwningProcess -ErrorAction SilentlyContinue
+        if (-not $proc -or $proc.ProcessName -ne 'node') { continue }
+
+        $linea = (Get-CimInstance Win32_Process -Filter "ProcessId=$($proc.Id)" -ErrorAction SilentlyContinue).CommandLine
+        if ($linea -notmatch 'server\.js') {
+            Nota "  el proceso del puerto $Puerto no es el asistente, no se toca"
+            continue
+        }
+
+        Nota "  parando el asistente (pid $($proc.Id))"
+        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+    }
+    Start-Sleep -Seconds 2
+}
+
 $enUso = Get-NetTCPConnection -LocalPort $Puerto -State Listen -ErrorAction SilentlyContinue
 if ($enUso) {
     Nota "El asistente ya estaba en marcha (puerto $Puerto)"

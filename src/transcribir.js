@@ -90,3 +90,38 @@ export async function transcribir(audio, tipoMime) {
   if (!texto) throw new ErrorVoz("nada", "No se ha entendido nada. Prueba a hablar un poco mas cerca.");
   return texto;
 }
+
+/**
+ * Traduce un fallo de la API de voz a algo que ella pueda leer.
+ *
+ * No se reutiliza el traductor de errores de generar.js: aquel habla de
+ * modelos de chat, y ante un audio corrupto respondia "el modelo gpt-4.1 no
+ * sirve para esto, elige otro en Ajustes". Ni es verdad, ni hay ya ningun
+ * modelo que elegir, y la manda a buscar algo que no existe.
+ */
+export function traducirErrorVoz(err) {
+  if (err instanceof ErrorVoz) {
+    const status = ["sin-clave", "formato", "grande"].includes(err.codigo) ? 400 : 422;
+    return { status, mensaje: err.message };
+  }
+  if (err instanceof OpenAI.AuthenticationError) {
+    return { status: 400, mensaje: "La clave de OpenAI no es valida. Revisala en Ajustes." };
+  }
+  if (err instanceof OpenAI.RateLimitError) {
+    const sinSaldo = /credit|billing|quota/i.test(err?.message ?? "");
+    return {
+      status: sinSaldo ? 402 : 429,
+      mensaje: sinSaldo
+        ? "La cuenta de OpenAI esta a cero. Entra en platform.openai.com, apartado Billing, y compra saldo."
+        : "Demasiadas seguidas. Espera unos segundos y vuelve a intentarlo.",
+    };
+  }
+  if (err instanceof OpenAI.BadRequestError) {
+    // Audio ilegible, cortado o que no es audio de verdad.
+    return { status: 422, mensaje: "No he podido leer esa grabacion. Vuelve a intentarlo." };
+  }
+  if (err instanceof OpenAI.APIConnectionError) {
+    return { status: 504, mensaje: "Sin conexion para pasar la voz a texto. Reintenta." };
+  }
+  return { status: 500, mensaje: "No se ha podido pasar la voz a texto. Reintenta." };
+}

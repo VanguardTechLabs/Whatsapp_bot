@@ -27,7 +27,7 @@ import {
   verificarPassword,
   guardarPassword,
 } from "./src/ajustes.js";
-import { transcribir, ErrorVoz, MAX_AUDIO } from "./src/transcribir.js";
+import { transcribir, traducirErrorVoz, MAX_AUDIO } from "./src/transcribir.js";
 import {
   listarClientes,
   obtenerCliente,
@@ -402,11 +402,7 @@ app.post(
       const texto = await transcribir(req.body, req.get("content-type"));
       res.json({ texto });
     } catch (err) {
-      if (err instanceof ErrorVoz) {
-        const status = err.codigo === "sin-clave" || err.codigo === "formato" || err.codigo === "grande" ? 400 : 422;
-        return res.status(status).json({ error: err.message });
-      }
-      const { status, mensaje } = traducirError(err);
+      const { status, mensaje } = traducirErrorVoz(err);
       console.error("[transcribir]", err?.status ?? "", err?.message ?? err);
       res.status(status).json({ error: mensaje });
     }

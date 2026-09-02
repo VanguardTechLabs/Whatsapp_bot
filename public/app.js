@@ -54,7 +54,7 @@ function ponerModo(nuevo) {
   el.filaIdioma.classList.toggle("hidden", !escribiendoElla);
   // El microfono es para SU voz, en espanol. En "El ha escrito" el cuadro
   // lleva el mensaje del cliente, asi que ahi no pinta nada.
-  el.filaVoz.classList.toggle("hidden", !escribiendoElla || !puedeGrabar());
+  el.filaVoz?.classList.toggle("hidden", !escribiendoElla || !puedeGrabar());
   el.rotulo.textContent = escribiendoElla ? "Que le quieres decir" : "Que te ha escrito";
   el.mensaje.placeholder = escribiendoElla
     ? "Escribelo en espanol, a tu manera. Por ejemplo: que hace mucho que no hablamos y me he acordado de el."
@@ -607,10 +607,16 @@ async function enviarAudio(audio, tipo) {
   }
 }
 
-el.grabar.addEventListener("click", () => {
-  if (grabadora?.state === "recording") pararDeGrabar();
-  else empezarAGrabar();
-});
+// Con guarda a proposito: si un navegador se quedara con el HTML viejo (sin el
+// boton) y el JS nuevo, un `null.addEventListener` reventaria aqui y se
+// llevaria por delante todo lo que se registra despues, que es copiar y
+// generar. El microfono es un extra; lo demas no puede depender de el.
+if (el.grabar) {
+  el.grabar.addEventListener("click", () => {
+    if (grabadora?.state === "recording") pararDeGrabar();
+    else empezarAGrabar();
+  });
+}
 
 /* --------------------------------------------------------------- copiar */
 
